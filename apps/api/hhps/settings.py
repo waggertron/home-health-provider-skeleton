@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "seed",
     "clinicians",
     "patients",
+    "visits",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
