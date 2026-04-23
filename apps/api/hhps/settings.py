@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "clinicians",
     "patients",
     "visits",
+    "routing",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
