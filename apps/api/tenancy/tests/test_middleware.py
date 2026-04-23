@@ -1,3 +1,5 @@
+from typing import cast
+
 import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -10,7 +12,7 @@ from tenancy.models import Tenant
 def test_request_tenant_is_set_from_jwt():
     tenant = Tenant.objects.create(name="Westside", timezone="UTC")
     user = User.objects.create_user(email="a@x.demo", password="p", tenant=tenant, role=Role.ADMIN)
-    token = RefreshToken.for_user(user)
+    token = cast(RefreshToken, RefreshToken.for_user(user))
     token["tenant_id"] = tenant.id
     access = str(token.access_token)
 

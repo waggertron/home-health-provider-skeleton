@@ -3,18 +3,19 @@ from typing import TYPE_CHECKING
 from django.contrib.auth.models import BaseUserManager
 
 if TYPE_CHECKING:
+    from accounts.models import User
     from tenancy.models import Tenant
 
 
-class UserManager(BaseUserManager):
+class UserManager(BaseUserManager["User"]):
     def create_user(
         self,
         email: str,
         password: str,
         tenant: "Tenant",
         role: str,
-        **extra,
-    ):
+        **extra: object,
+    ) -> "User":
         if not email:
             raise ValueError("email required")
         email = self.normalize_email(email)

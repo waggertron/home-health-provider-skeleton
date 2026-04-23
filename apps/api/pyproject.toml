@@ -37,3 +37,17 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["hhps", "tenancy", "accounts", "core", "seed"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main"]
+exclude = ["migrations/", "\\.venv/"]
+ignore_missing_imports = true
+# Loose mode: catch obvious bugs, don't fight dynamic Django patterns.
+check_untyped_defs = true
+disallow_untyped_defs = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[tool.django-stubs]
+django_settings_module = "hhps.settings"

@@ -57,5 +57,8 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
+      - name: Typecheck (mypy)
+        run: uv run mypy hhps tenancy accounts core seed
+
       - name: Pytest
         run: uv run pytest -v

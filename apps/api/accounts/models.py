@@ -21,7 +21,7 @@ class User(AbstractBaseUser):
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS: list[str] = []
+    REQUIRED_FIELDS = []
 
     objects = UserManager()
     scoped = TenantScopedManager()

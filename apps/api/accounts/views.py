@@ -1,3 +1,5 @@
+from typing import cast
+
 from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -10,7 +12,9 @@ from .serializers import LoginSerializer, UserSerializer
 
 
 def _issue_tokens(user) -> dict[str, str]:
-    refresh = RefreshToken.for_user(user)
+    # for_user is typed on the parent Token class so mypy infers Token here;
+    # RefreshToken is the actual runtime class (it declares the `access_token` property).
+    refresh = cast(RefreshToken, RefreshToken.for_user(user))
     refresh["tenant_id"] = user.tenant_id
     refresh["role"] = user.role
     return {"access": str(refresh.access_token), "refresh": str(refresh)}

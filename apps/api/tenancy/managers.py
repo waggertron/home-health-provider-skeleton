@@ -36,5 +36,5 @@ class TenantScopedManager(models.Manager.from_queryset(TenantScopedQuerySet)):  
     """
 
     def get_queryset(self) -> TenantScopedQuerySet:
-        qs: TenantScopedQuerySet = super().get_queryset()  # type: ignore[assignment]
+        qs: TenantScopedQuerySet = super().get_queryset()
         return qs.for_current_tenant()
