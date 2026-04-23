@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser
 from django.db import models
 
+from tenancy.managers import TenantScopedManager
 from tenancy.models import Tenant
 
 from .managers import UserManager
@@ -23,6 +24,7 @@ class User(AbstractBaseUser):
     REQUIRED_FIELDS: list[str] = []
 
     objects = UserManager()
+    scoped = TenantScopedManager()
 
     class Meta:
         constraints = [
