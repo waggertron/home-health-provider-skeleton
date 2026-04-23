@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "core",
     "tenancy",
     "accounts",
+    "seed",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
