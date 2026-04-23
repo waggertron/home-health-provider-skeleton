@@ -1,0 +1,49 @@
+services:
+  db-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  cache-redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db-init:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    command: >
+      sh -c "python manage.py migrate --no-input &&
+             python manage.py seed_demo --idempotent"
+    depends_on:
+      db-postgres:
+        condition: service_healthy
+
+  api-django:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db-postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
