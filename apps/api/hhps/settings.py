@@ -39,6 +39,7 @@ SILENCED_SYSTEM_CHECKS = ["auth.E003"]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "tenancy.middleware.TenantMiddleware",
 ]
 
 ROOT_URLCONF = "hhps.urls"

@@ -6,4 +6,5 @@ from rest_framework.response import Response
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health(request):
-    return Response({"ok": True, "tenant": None})
+    tenant = getattr(request, "tenant", None)
+    return Response({"ok": True, "tenant": tenant.name if tenant else None})
