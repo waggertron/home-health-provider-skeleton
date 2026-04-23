@@ -75,48 +75,102 @@ Every decision below was made explicitly during scoping. These are load-bearing 
 
 All services run under `docker-compose` on a single developer machine. **`docker compose up` boots the entire platform** — API, worker, real-time gateway, ops console, marketing site, Expo dev server, Metabase, and a one-shot seed step.
 
-```
-                      ┌──────────────────────────────┐
-                      │ Marketing Site (HeroUI)      │  :3002
-                      │ Next.js — public landing     │
-                      └──────────────┬───────────────┘
-                                     │ "Book Demo" deep-link
-                                     ▼
-┌──────────────────────┐     ┌──────────────────────┐
-│ Clinician RN App     │     │ Ops Web Console      │  :3001
-│ (Expo / TS)          │     │ Next.js + HeroUI     │
-│ served from compose  │     │                      │
-└─────┬─────────┬──────┘     └─────┬─────────┬──────┘
-      │ REST    │ WS              │ REST    │ WS
-      ▼         ▼                 ▼         ▼
-┌──────────────┐  ┌─────────────────────────────────┐
-│ Django API   │◄─┤ Node RT Gateway                 │  :8080
-│ + DRF  :8000 │  │ (WS auth via Django-issued JWT) │
-└──┬──────────┬┘  └────────────────┬────────────────┘
-   │          │                   │
-   │          │  Redis Pub/Sub ◄──┤
-   │          ▼
-   │      ┌───────────┐
-   │      │ Celery    │
-   │      │ Worker    │  ← OR-Tools VRP, sklearn rerank,
-   │      │           │    nightly BI rollup, SMS sim writer
-   │      └───┬───────┘
-   │          │
-   ▼          ▼
-┌──────────────────────────┐    ┌─────────────────────┐
-│ Postgres 16       :5432  │    │ db-init (one-shot)  │
-│  ├── schema: core        │◄───┤ migrate +           │
-│  └── schema: reporting   │    │ seed_demo idempotent│
-└──────────────────────────┘    └─────────────────────┘
-        ▲
-        │ read-only user
-┌───────┴────────┐
-│ Metabase :3000 │
-└────────────────┘
+### 4.1 System Context (C4 Level 1)
+
+Who uses the system and what external services are involved.
+
+```mermaid
+C4Context
+    title System Context — Home Health Provider Skeleton
+
+    Person(dispatcher, "Dispatcher / Scheduler", "Uses the ops console to assign and track visits")
+    Person(clinician, "Field Clinician", "Uses the RN mobile app to see today's route and chart visits")
+    Person(patient, "Patient", "Receives simulated SMS with a signed link; clicks to confirm")
+    Person(admin, "Agency Admin", "Uses ops console + Metabase for oversight and reports")
+
+    System(hhps, "HHPS Platform", "Home-health dispatch + routing + BI, multi-tenant")
+
+    System_Ext(mapbox, "Mapbox (optional)", "Free tier tiles for the ops map UI")
+
+    Rel(dispatcher, hhps, "Manages schedule, reassigns visits, watches live map")
+    Rel(clinician, hhps, "Logs in, sees route, checks in/out, adds notes")
+    Rel(patient, hhps, "Opens SMS link, confirms appointment")
+    Rel(admin, hhps, "Views dashboards")
+    Rel(hhps, mapbox, "Pulls map tiles (no real traffic data)")
 ```
 
-**Boot order:**
-`db-postgres` + `cache-redis` → `db-init` (migrates + seeds, then exits) → `api-django` + `worker-celery` + `rt-node` → `web-ops` + `web-marketing` + `web-rn` + `bi-metabase`.
+### 4.2 Service Topology (C4 Level 2 / Container)
+
+Every rectangle is a container in `docker-compose.yml`.
+
+```mermaid
+flowchart TB
+    subgraph Public["Public-facing web"]
+        mkt["web-marketing<br/>Next.js + HeroUI<br/>:3002"]
+    end
+
+    subgraph Clients["Authenticated clients"]
+        ops["web-ops<br/>Next.js + HeroUI<br/>:3001"]
+        rn["web-rn<br/>Expo / React Native<br/>:8081 + :19000-2"]
+    end
+
+    subgraph Runtime["Application runtime"]
+        api["api-django<br/>Django 5 + DRF<br/>:8000"]
+        rt["rt-node<br/>Node 20 + WS gateway<br/>:8080"]
+        worker["worker-celery<br/>VRP · ML · SMS · BI rollup"]
+    end
+
+    subgraph Data["Stateful services"]
+        pg[("db-postgres<br/>Postgres 16<br/>schemas: core, reporting")]
+        redis[("cache-redis<br/>Redis 7<br/>broker · cache · pub/sub")]
+    end
+
+    subgraph OneShot["Boot-time"]
+        init["db-init<br/>migrate + seed_demo<br/>exits after completion"]
+    end
+
+    subgraph BI["Analytics"]
+        meta["bi-metabase<br/>Metabase OSS<br/>:3000"]
+    end
+
+    mkt -. deep-link .-> ops
+    ops -- REST --> api
+    ops -- WS --> rt
+    rn -- REST --> api
+    rn -- WS --> rt
+
+    api --> pg
+    api --> redis
+    worker --> pg
+    worker --> redis
+    rt --> redis
+
+    init --> pg
+
+    meta -- read-only role --> pg
+
+    classDef oneshot stroke-dasharray: 5 5
+    class init oneshot
+```
+
+### 4.3 Boot Order
+
+`docker compose up` sequences services so downstream ones only start after their dependencies are ready.
+
+```mermaid
+flowchart LR
+    pg[db-postgres] --> init[db-init<br/>migrate + seed]
+    redis[cache-redis] --> rt[rt-node]
+    init -- service_completed_successfully --> api[api-django]
+    init -- service_completed_successfully --> worker[worker-celery]
+    api --> ops[web-ops]
+    ops --> mkt[web-marketing]
+    api --> rn[web-rn]
+    pg --> meta[bi-metabase]
+
+    classDef done stroke:#2a2,stroke-width:2px
+    class init done
+```
 
 Downstream services declare `depends_on: db-init: condition: service_completed_successfully` so the API only starts after the database is migrated and seeded.
 
@@ -225,6 +279,102 @@ Detail belongs in a separate data-model doc; here is the skeleton.
 
 **Tenancy enforcement.** Every `core.*` table has `tenant_id`. Django middleware reads `tenant_id` from the JWT claim and attaches it to the request. A `TenantScopedManager` on every model filters on it automatically; a custom `save()` blocks inserts without a matching tenant. Direct ORM bypass is forbidden (lint rule + code review).
 
+### 6.1 Core Domain ERD
+
+```mermaid
+erDiagram
+    Tenant ||--o{ User : "has"
+    Tenant ||--o{ Clinician : "employs"
+    Tenant ||--o{ Patient : "serves"
+    Tenant ||--o{ Visit : "schedules"
+    Tenant ||--o{ RoutePlan : "owns"
+    Tenant ||--o{ SmsOutbox : "sends"
+
+    User ||--o| Clinician : "1:1 when role=clinician"
+    Clinician ||--o{ Visit : "assigned to"
+    Patient ||--o{ Visit : "receives"
+    Clinician ||--o{ RoutePlan : "for day"
+    Clinician ||--o{ ClinicianPosition : "reports"
+    Visit ||--o{ SmsOutbox : "triggers"
+
+    Tenant {
+        int id PK
+        string name
+        string timezone
+        float home_base_lat
+        float home_base_lon
+    }
+    User {
+        int id PK
+        int tenant_id FK
+        string email
+        string role "admin|scheduler|clinician"
+    }
+    Clinician {
+        int id PK
+        int tenant_id FK
+        int user_id FK
+        string credentials "RN|LVN|MA|phlebotomist"
+        string[] skills
+        float home_lat
+        float home_lon
+        json shift_windows
+    }
+    Patient {
+        int id PK
+        int tenant_id FK
+        string name
+        string phone
+        string address
+        float lat
+        float lon
+        string required_skill
+    }
+    Visit {
+        int id PK
+        int tenant_id FK
+        int patient_id FK
+        int clinician_id FK "nullable"
+        datetime window_start
+        datetime window_end
+        string required_skill
+        string status "scheduled|assigned|en_route|on_site|completed|cancelled|missed"
+        datetime check_in_at
+        datetime check_out_at
+        int ordering_seq
+        text notes
+    }
+    RoutePlan {
+        int id PK
+        int tenant_id FK
+        int clinician_id FK
+        date date
+        json visits_ordered
+        json solver_metadata
+    }
+    ClinicianPosition {
+        int id PK
+        int tenant_id FK
+        int clinician_id FK
+        float lat
+        float lon
+        datetime ts
+        float heading
+        float speed
+    }
+    SmsOutbox {
+        int id PK
+        int tenant_id FK
+        int patient_id FK
+        int visit_id FK
+        string template
+        text body
+        string status "queued|delivered|failed"
+        datetime created_at
+        datetime delivered_at
+    }
+```
+
 ---
 
 ## 7. Key Data Flows
@@ -239,6 +389,29 @@ Detail belongs in a separate data-model doc; here is the skeleton.
    - The newly assigned clinician's RN app
 4. Each client updates its view; no polling involved
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as Dispatcher (web-ops)
+    participant API as api-django
+    participant PG as db-postgres
+    participant R as cache-redis
+    participant RT as rt-node
+    participant C1 as Old clinician (web-rn)
+    participant C2 as New clinician (web-rn)
+
+    D->>API: PATCH /api/v1/visits/42/assign {clinician_id:17}
+    API->>PG: UPDATE visit SET clinician_id=17 WHERE id=42 AND tenant_id=1
+    API->>R: PUBLISH tenant:1:events {type:visit.reassigned, ...}
+    API-->>D: 200 OK
+    R-->>RT: deliver event (subscriber)
+    par fan-out
+        RT-->>D: WS frame {visit.reassigned}
+        RT-->>C1: WS frame (removed from your list)
+        RT-->>C2: WS frame (added to your list)
+    end
+```
+
 ### 7.2 Dispatcher presses "Optimize Day"
 
 1. Ops console → `POST /api/v1/schedule/:tenant_id/optimize {date}`
@@ -249,6 +422,33 @@ Detail belongs in a separate data-model doc; here is the skeleton.
 6. Worker publishes one `schedule.optimized` event with the summary; ops UI fetches the new routes
 7. Clinicians affected receive `visit.reassigned` events per visit
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as Dispatcher (web-ops)
+    participant API as api-django
+    participant R as cache-redis (broker+pubsub)
+    participant W as worker-celery
+    participant ORT as OR-Tools + ML
+    participant PG as db-postgres
+    participant RT as rt-node
+
+    D->>API: POST /api/v1/schedule/1/optimize {date:2026-04-23}
+    API->>R: enqueue vrp.optimize_day(1, 2026-04-23)
+    API-->>D: 202 {job_id, status:queued}
+    R-->>W: dequeue task
+    W->>PG: SELECT visits, clinicians for date
+    W->>ORT: solve VRP with skill+time-window constraints,<br/>rerank candidates with sklearn model
+    ORT-->>W: optimized routes
+    W->>PG: bulk UPDATE visits + INSERT RoutePlan rows
+    W->>R: PUBLISH tenant:1:events {type:schedule.optimized}
+    par per affected visit
+        W->>R: PUBLISH tenant:1:events {type:visit.reassigned}
+    end
+    R-->>RT: events
+    RT-->>D: WS frames
+```
+
 ### 7.3 Clinician checks in at a patient's home
 
 1. Clinician presses "Check In" in RN app → `POST /api/v1/visits/:id/check-in {lat, lon}`
@@ -256,12 +456,61 @@ Detail belongs in a separate data-model doc; here is the skeleton.
 3. Publishes `visit.status_changed` → ops console updates live
 4. Publishes `sms.send` with template `visit_arrival` → Celery handles it → `SmsOutbox` row created → `sms.delivered` event → patient "receives" the SMS (viewable in ops console's SMS log)
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Clinician (web-rn)
+    participant API as api-django
+    participant PG as db-postgres
+    participant R as cache-redis
+    participant W as worker-celery
+    participant RT as rt-node
+    participant D as Dispatcher (web-ops)
+
+    C->>API: POST /api/v1/visits/42/check-in {lat,lon}
+    API->>API: verify clinician owns visit + tenant match
+    API->>PG: UPDATE visit SET status='on_site', check_in_at=now()
+    API->>R: PUBLISH tenant:1:events {type:visit.status_changed}
+    API->>R: enqueue sms.deliver(visit=42, template=visit_arrival)
+    API-->>C: 200 OK
+    R-->>RT: status_changed event
+    RT-->>D: WS frame (map pin turns green)
+    R-->>W: dequeue sms task
+    W->>PG: INSERT SmsOutbox status=delivered
+    W->>R: PUBLISH tenant:1:events {type:sms.delivered}
+    R-->>RT: sms event
+    RT-->>D: WS frame (SMS log updates)
+```
+
 ### 7.4 Patient taps the SMS confirmation link
 
 1. Seeded SMS body includes `https://host/p/{signed_token}` (HMAC-signed, 72-hour TTL, single-use)
 2. Patient browser hits `GET /p/{token}` — Django's public endpoint decodes, resolves `Visit`
 3. Patient sees a minimal HTML page: visit window, clinician name, "Confirm" / "Request reschedule" buttons
 4. Confirmation writes `Visit.patient_confirmed_at`, publishes `visit.patient_confirmed`
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as Patient browser
+    participant API as api-django (public)
+    participant PG as db-postgres
+    participant R as cache-redis
+    participant RT as rt-node
+    participant D as Dispatcher (web-ops)
+
+    Note over P: Patient taps link in simulated SMS
+    P->>API: GET /p/{signed_token}
+    API->>API: HMAC verify, check TTL, check single-use nonce
+    API->>PG: SELECT visit + clinician + patient by token
+    API-->>P: 200 HTML page (window, clinician name, Confirm button)
+    P->>API: POST /p/{signed_token}/confirm
+    API->>PG: UPDATE visit SET patient_confirmed_at=now();<br/>mark nonce used
+    API->>R: PUBLISH tenant:1:events {type:visit.patient_confirmed}
+    API-->>P: 200 "Confirmed — see you soon"
+    R-->>RT: event
+    RT-->>D: WS frame (visit card shows green "confirmed" badge)
+```
 
 ---
 
