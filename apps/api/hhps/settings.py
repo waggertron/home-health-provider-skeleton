@@ -23,7 +23,18 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "core",
     "tenancy",
+    "accounts",
 ]
+
+AUTH_USER_MODEL = "accounts.User"
+AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
+
+# auth.E003: USERNAME_FIELD uniqueness. Our User model has per-tenant email
+# uniqueness (tenant_id, email) — not globally unique. Django's default
+# ModelBackend will raise MultipleObjectsReturned if the same email ever
+# exists in two tenants. Phase 1 demo seed uses distinct emails so this is
+# safe. Phase 2+ may replace the auth backend with a tenant-aware one.
+SILENCED_SYSTEM_CHECKS = ["auth.E003"]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
