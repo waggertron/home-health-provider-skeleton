@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import include, path
 
-# Apps register their own url modules as they come online.
-urlpatterns: list[path] = []
+urlpatterns = [
+    path("api/v1/", include("core.urls")),
+]
