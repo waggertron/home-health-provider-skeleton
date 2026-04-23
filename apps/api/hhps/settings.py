@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "tenancy",
     "accounts",
     "seed",
+    "clinicians",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
