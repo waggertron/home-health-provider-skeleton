@@ -24,13 +24,9 @@ def test_create_user_with_tenant_and_role():
 @pytest.mark.django_db
 def test_email_is_unique_within_tenant():
     tenant = Tenant.objects.create(name="W", timezone="UTC")
-    User.objects.create_user(
-        email="a@x.demo", password="p", tenant=tenant, role=Role.CLINICIAN
-    )
+    User.objects.create_user(email="a@x.demo", password="p", tenant=tenant, role=Role.CLINICIAN)
     with pytest.raises(IntegrityError):
-        User.objects.create_user(
-            email="a@x.demo", password="p", tenant=tenant, role=Role.CLINICIAN
-        )
+        User.objects.create_user(email="a@x.demo", password="p", tenant=tenant, role=Role.CLINICIAN)
 
 
 @pytest.mark.django_db

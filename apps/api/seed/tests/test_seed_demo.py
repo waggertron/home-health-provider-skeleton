@@ -33,9 +33,7 @@ def test_seed_demo_force_wipes_and_reseeds():
     call_command("seed_demo", "--force")
 
     # After --force, timezone is restored to the canonical value.
-    assert (
-        Tenant.objects.get(name="Westside Home Health").timezone == "America/Los_Angeles"
-    )
+    assert Tenant.objects.get(name="Westside Home Health").timezone == "America/Los_Angeles"
     assert Tenant.objects.count() == 2
 
 

@@ -9,9 +9,7 @@ from tenancy.models import Tenant
 @pytest.mark.django_db
 def test_request_tenant_is_set_from_jwt():
     tenant = Tenant.objects.create(name="Westside", timezone="UTC")
-    user = User.objects.create_user(
-        email="a@x.demo", password="p", tenant=tenant, role=Role.ADMIN
-    )
+    user = User.objects.create_user(email="a@x.demo", password="p", tenant=tenant, role=Role.ADMIN)
     token = RefreshToken.for_user(user)
     token["tenant_id"] = tenant.id
     access = str(token.access_token)

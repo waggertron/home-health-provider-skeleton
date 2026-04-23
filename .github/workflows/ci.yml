@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    name: api — lint + typecheck + pytest
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hhps
+          POSTGRES_PASSWORD: hhps_dev_only
+          POSTGRES_DB: hhps_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U hhps"
+          --health-interval=3s
+          --health-timeout=3s
+          --health-retries=20
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: hhps
+      POSTGRES_PASSWORD: hhps_dev_only
+      POSTGRES_DB: hhps_test
+      DJANGO_SECRET_KEY: ci-secret
+      DJANGO_DEBUG: "0"
+      DEMO_PASSWORD: demo1234
+
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.6.9"
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Sync dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Pytest
+        run: uv run pytest -v
