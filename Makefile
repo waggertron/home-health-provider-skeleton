@@ -1,5 +1,6 @@
 .PHONY: up down reseed logs test lint type fmt shell sync verify \
-        test-node lint-node type-node verify-node verify-all
+        test-node lint-node type-node verify-node verify-all \
+        cov cov-node cov-all
 
 # The full set of first-party Python packages — keep in sync with
 # apps/api/hhps/settings.py::INSTALLED_APPS (minus django built-ins).
@@ -50,6 +51,15 @@ type-node:
 verify-node: type-node test-node
 
 verify-all: verify verify-node
+
+# Coverage reports. Python target aborts if overall coverage drops below 80%.
+cov:
+	cd apps/api && uv run pytest --cov=. --cov-report=term-missing --cov-report=html --cov-fail-under=80
+
+cov-node:
+	cd apps/rt-node && npm run coverage
+
+cov-all: cov cov-node
 
 shell:
 	docker compose exec api-django uv run python manage.py shell

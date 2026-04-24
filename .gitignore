@@ -12,6 +12,13 @@ env/
 .ruff_cache/
 *.egg-info/
 
+# Coverage artifacts
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+coverage/
+
 # Env
 .env
 .env.local

@@ -1,0 +1,20 @@
+[run]
+source = .
+branch = True
+omit =
+    */migrations/*
+    */tests/*
+    */__pycache__/*
+    .venv/*
+    manage.py
+    hhps/asgi.py
+    hhps/wsgi.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+show_missing = True
+precision = 1

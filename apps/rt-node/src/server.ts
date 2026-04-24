@@ -114,6 +114,7 @@ export function attachConnection(
   });
 }
 
+/* c8 ignore start -- direct-run bootstrap, exercised by the smoke test */
 const entry = process.argv[1];
 const isDirectRun = entry && import.meta.url === `file://${entry}`;
 if (isDirectRun) {
@@ -132,3 +133,4 @@ if (isDirectRun) {
     console.log(`rt-node listening on :${port}`);
   });
 }
+/* c8 ignore stop */
