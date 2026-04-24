@@ -30,7 +30,7 @@ def two_tenants_with_clinicians(db):
 
 
 def _auth_client(tenant: Tenant, role: str, email: str) -> APIClient:
-    user = User.objects.create_user(email=email, password="p", tenant=tenant, role=role)
+    User.objects.create_user(email=email, password="p", tenant=tenant, role=role)
     client = APIClient()
     r = client.post("/api/v1/auth/login", {"email": email, "password": "p"}, format="json")
     assert r.status_code == 200, r.content

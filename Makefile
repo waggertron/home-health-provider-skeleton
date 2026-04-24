@@ -1,7 +1,11 @@
-.PHONY: up down reseed logs test lint type fmt shell sync
+.PHONY: up down reseed logs test lint type fmt shell sync verify
+
+# The full set of first-party Python packages — keep in sync with
+# apps/api/hhps/settings.py::INSTALLED_APPS (minus django built-ins).
+API_APPS := hhps tenancy accounts core seed clinicians patients visits routing messaging
 
 sync:
-	cd apps/api && uv sync
+	cd apps/api && uv sync --extra dev
 
 up:
 	docker compose up -d
@@ -22,13 +26,18 @@ test:
 	cd apps/api && uv run pytest -v
 
 lint:
-	cd apps/api && uv run ruff check . && uv run ruff format --check .
+	cd apps/api && uv run ruff check .
+	cd apps/api && uv run ruff format --check .
 
 type:
-	cd apps/api && uv run mypy hhps tenancy accounts core seed
+	cd apps/api && uv run mypy $(API_APPS)
 
 fmt:
-	cd apps/api && uv run ruff format . && uv run ruff check --fix .
+	cd apps/api && uv run ruff format .
+	cd apps/api && uv run ruff check --fix .
+
+# Run every local check CI runs. Fails fast on the first broken step.
+verify: lint type test
 
 shell:
 	docker compose exec api-django uv run python manage.py shell

@@ -5,6 +5,7 @@ Phase 1 scope: bootstrap Django with Postgres + DRF + SimpleJWT, no first-party
 apps yet. Each subsequent task adds its own app to INSTALLED_APPS.
 """
 
+import hashlib
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -74,8 +75,6 @@ REST_FRAMEWORK = {
 # emit InsecureKeyLengthWarning under short dev/test SECRET_KEY values. In
 # production, SECRET_KEY must be generated long in the first place; this
 # guard exists so short test keys don't corrupt local/CI output.
-import hashlib
-
 _SIGNING_KEY = (
     SECRET_KEY
     if len(SECRET_KEY.encode("utf-8")) >= 32
