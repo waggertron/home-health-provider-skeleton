@@ -1,6 +1,7 @@
 .PHONY: up down reseed logs test lint type fmt shell sync verify \
         test-node lint-node type-node verify-node verify-all \
-        cov cov-node cov-all
+        test-web type-web verify-web \
+        cov cov-node cov-web cov-all
 
 # The full set of first-party Python packages — keep in sync with
 # apps/api/hhps/settings.py::INSTALLED_APPS (minus django built-ins).
@@ -50,7 +51,16 @@ type-node:
 
 verify-node: type-node test-node
 
-verify-all: verify verify-node
+# web-ops (Phase 5): Next.js + HeroUI dispatcher console.
+test-web:
+	cd apps/web-ops && npm test
+
+type-web:
+	cd apps/web-ops && npm run typecheck
+
+verify-web: type-web test-web
+
+verify-all: verify verify-node verify-web
 
 # Coverage reports. Python target aborts if overall coverage drops below 80%.
 cov:
@@ -59,7 +69,10 @@ cov:
 cov-node:
 	cd apps/rt-node && npm run coverage
 
-cov-all: cov cov-node
+cov-web:
+	cd apps/web-ops && npm run coverage
+
+cov-all: cov cov-node cov-web
 
 shell:
 	docker compose exec api-django uv run python manage.py shell
