@@ -47,6 +47,10 @@ CELERY_TIMEZONE = "America/Los_Angeles"
 # Tests flip this to True via @override_settings to run tasks inline.
 CELERY_TASK_ALWAYS_EAGER = False
 
+# Phase 4 events: publish domain events on tenant-scoped channels for rt-node fanout.
+# Same Redis instance as the broker; PUBLISH is distinct from queue semantics.
+EVENTS_REDIS_URL = f"{_REDIS_URL}/0"
+
 AUTH_USER_MODEL = "accounts.User"
 AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
 
