@@ -4,6 +4,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { verifyToken } from './auth.js';
 import { Heartbeat } from './heartbeat.js';
 import { SubscriberManager } from './redis.js';
+import { deriveSigningKey } from './signing-key.js';
 
 const DEFAULT_PORT = 8080;
 const DEFAULT_PING_INTERVAL_MS = 30_000;
@@ -119,11 +120,12 @@ const entry = process.argv[1];
 const isDirectRun = entry && import.meta.url === `file://${entry}`;
 if (isDirectRun) {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
-  const signingKey = process.env.JWT_SIGNING_KEY ?? '';
-  if (!signingKey) {
+  const rawKey = process.env.JWT_SIGNING_KEY ?? '';
+  if (!rawKey) {
     console.error('JWT_SIGNING_KEY is required');
     process.exit(1);
   }
+  const signingKey = deriveSigningKey(rawKey);
   const { httpServer } = createServer({
     port,
     redisUrl: process.env.REDIS_URL,
