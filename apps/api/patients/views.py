@@ -8,6 +8,8 @@ from .serializers import PatientSerializer
 class PatientViewSet(BaseTenantViewSet):
     """Full CRUD for Patients. Scheduler/admin only."""
 
-    scoped_model = Patient
     serializer_class = PatientSerializer
     permission_classes = [IsSchedulerOrAdmin]
+
+    def get_queryset(self):
+        return Patient.scoped.all()

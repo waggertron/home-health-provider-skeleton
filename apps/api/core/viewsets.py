@@ -5,22 +5,13 @@ from rest_framework.exceptions import PermissionDenied
 
 
 class BaseTenantViewSet(viewsets.ModelViewSet):
-    """ModelViewSet that scopes queryset to the caller's tenant.
+    """ModelViewSet that stamps the caller's tenant onto new rows.
 
-    Subclasses set `scoped_model` (a model with a TenantScopedManager on it
-    named `.scoped`) and `serializer_class`. The queryset is always resolved
-    via the model's `scoped` manager, which reads the current tenant from the
-    contextvar set by tenancy.middleware.TenantMiddleware.
-
-    On create, the caller's tenant is stamped onto the new row automatically.
+    Subclasses implement `get_queryset` themselves — typically returning
+    `<Model>.scoped.all()` so the TenantScopedManager contextvar handles
+    isolation. `perform_create` stamps `tenant` from the request onto
+    created rows so API callers can't forge or omit it.
     """
-
-    scoped_model = None
-
-    def get_queryset(self):
-        if self.scoped_model is None:  # pragma: no cover — catches misconfiguration
-            raise RuntimeError(f"{type(self).__name__} must set scoped_model")
-        return self.scoped_model.scoped.all()
 
     def perform_create(self, serializer) -> None:
         tenant = getattr(self.request, "tenant", None)
