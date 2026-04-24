@@ -6,4 +6,5 @@ from . import views
 urlpatterns = [
     path("login", views.login),
     path("refresh", TokenRefreshView.as_view()),
+    path("ws-token", views.ws_token),
 ]
