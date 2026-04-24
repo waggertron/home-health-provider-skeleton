@@ -5,7 +5,7 @@
 Portfolio-scale clone of a B2B home-health dispatching platform — clinician routing, ops console, patient engagement.
 Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Next.js (HeroUI)**. BI: **Metabase**.
 
-> **Status:** Phase 1 (Foundations), Phase 2 (Core Domain), and Phase 3 (Routing & ML) complete. See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
+> **Status:** Phase 1 (Foundations), Phase 2 (Core Domain), Phase 3 (Routing & ML), and Phase 4 (Real-time gateway) complete. See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
 
 ## What works today
 
@@ -27,6 +27,8 @@ Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Ne
   - `POST /schedule/<date>/optimize` — enqueues the OR-Tools VRP solve for a tenant/date (scheduler/admin). Returns `{job_id, status}`; Celery writes the resulting `RoutePlan` rows and stamps each affected Visit with its clinician + ordering.
 - **Routing brain:** `scheduling` app houses the OR-Tools VRP adapter, the sklearn `GradientBoostingRegressor` re-ranker, and the Celery `optimize_day` task. Haversine distance matrix + 40 mph fixed-speed travel times; credential-hierarchy skill constraints; 30-min service time; 10s solve budget. Ranker artifact lives at `apps/api/scheduling/artifacts/ranker.pkl` (gitignored) — train with `python manage.py train_ranker`.
 - **Dedicated Celery worker** container shares the API image. Tests run tasks inline via `CELERY_TASK_ALWAYS_EAGER=True` so CI doesn't need a live worker.
+- **Real-time fanout:** state changes (`visit.reassigned`, `visit.status_changed`, `schedule.optimized`, `clinician.position_updated`) publish to `tenant:{id}:events` on Redis. A new `rt-node` TypeScript gateway (`apps/rt-node/`, ~500 LOC) on `:8080` accepts WebSocket clients at `/ws`, authenticates via a 60s JWT minted by `POST /auth/ws-token`, subscribes them to their tenant's channel, and forwards JSON frames. Heartbeats every 30s; idle sockets terminated after 60s.
+- **End-to-end smoke test:** `./ops/ws-smoke.sh` logs in, mints a WS token, opens a WS, triggers an optimize, and asserts a `schedule.optimized` frame arrives within 15s.
 - **Phase 3 seed scale:** `seed_demo --force` produces each tenant with 25 clinicians, 300 patients, 80 today-visits, and 90 days × 20 historical visits — deterministic under a tenant-seeded RNG.
 - **103 pytest tests** across models, auth, middleware, viewsets, custom actions, cross-tenant isolation, VRP adapter/solver, ML re-ranker, training, the Celery task, and the optimize endpoint.
 - `ruff check`, `ruff format --check`, and `mypy` clean across 115 source files.
@@ -110,6 +112,8 @@ apps/
     ├── messaging/    SmsOutbox model + read-only log
     └── scheduling/   OR-Tools VRP adapter/solver, sklearn re-ranker,
                       Celery optimize_day task, POST /schedule endpoint
+└── rt-node/          Node 20 + TS WebSocket gateway (Phase 4),
+                      Redis pub/sub fanout, JWT auth on connect
 docs/
 ├── architecture.md   Full system design + mermaid diagrams
 └── plans/            Phased implementation plans
@@ -131,7 +135,8 @@ See [`docs/architecture.md`](docs/architecture.md) for the full system design �
 | **1. Foundations** | ✅ complete | Bootable compose + JWT auth + tenancy + seed |
 | **2. Core domain** | ✅ complete | Clinician/Patient/Visit/RoutePlan/ClinicianPosition/SmsOutbox + tenant-scoped CRUD + Visit state machine |
 | **3. Routing & ML** | ✅ complete | OR-Tools VRP + sklearn re-ranker + Celery `optimize_day` task + `POST /schedule/<date>/optimize` endpoint |
-| 4. Real-time | 🔜 next | Node WebSocket gateway + Redis pub/sub |
+| **4. Real-time** | ✅ complete | Node 20 + TypeScript WebSocket gateway, Redis pub/sub fanout, 60s WS-auth tokens, end-to-end smoke test |
+| 5. Ops web console | 🔜 next | Next.js + HeroUI dispatcher UI |
 | 5. Ops web console | planned | Next.js + HeroUI dispatcher UI |
 | 6. Clinician RN app | planned | Expo + TypeScript field app |
 | 7. Marketing site | planned | Next.js + HeroUI landing page |

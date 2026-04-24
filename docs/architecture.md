@@ -5,7 +5,8 @@
 > - Phase 1 (Foundations) delivered 2026-04-23 — bootable compose, JWT auth, tenancy middleware, seed.
 > - Phase 2 (Core Domain) delivered 2026-04-24 — eight domain models, tenant-scoped REST API, Visit state machine. 73 tests, lint/type/CI all green.
 > - Phase 3 (Routing & ML) delivered 2026-04-24 — OR-Tools VRP adapter + solver, sklearn GradientBoostingRegressor re-ranker, Celery `optimize_day` task, `POST /schedule/<date>/optimize` endpoint, Phase 3 seed scale (25 clinicians × 300 patients × 80 today-visits × 90 days of history per tenant). 103 tests.
-> - Phase 4 (Real-time) is next.
+> - Phase 4 (Real-time) delivered 2026-04-24 — `core.events.publish()` + tenant-scoped Redis channels, every Phase 3 write path emits events, `POST /auth/ws-token` mints 60s JWTs with `scope="ws"`, `apps/rt-node/` TypeScript gateway (`:8080`) authenticates WS clients and fans messages out, application-level heartbeats, end-to-end smoke test in `ops/ws-smoke.sh`. 196+ tests across Python + Node, 96%+ coverage on both sides.
+> - Phase 5 (Ops web console) is next.
 > **Subject:** A portfolio-scale clone of a B2B home-health dispatching platform, built to actually work end-to-end.
 > **Repo:** `home-health-provider-skeleton`
 
