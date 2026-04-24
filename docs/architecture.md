@@ -1,6 +1,10 @@
 # Home Health Provider Skeleton — Architecture
 
-> **Status:** Draft, scoped 2026-04-23. Reflects decisions agreed during scoping brainstorm.
+> **Status:** Living document.
+> - Scoped 2026-04-23.
+> - Phase 1 (Foundations) delivered 2026-04-23 — bootable compose, JWT auth, tenancy middleware, seed.
+> - Phase 2 (Core Domain) delivered 2026-04-24 — eight domain models, tenant-scoped REST API, Visit state machine. 73 tests, lint/type/CI all green.
+> - Phase 3 (Routing & ML) is next.
 > **Subject:** A portfolio-scale clone of a B2B home-health platform's operational platform, built to actually work end-to-end.
 > **Repo:** `home-health-provider-skeleton`
 
