@@ -2,9 +2,12 @@ import http from 'node:http';
 import Redis from 'ioredis';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { verifyToken } from './auth.js';
+import { Heartbeat } from './heartbeat.js';
 import { SubscriberManager } from './redis.js';
 
 const DEFAULT_PORT = 8080;
+const DEFAULT_PING_INTERVAL_MS = 30_000;
+const DEFAULT_PONG_TIMEOUT_MS = 60_000;
 
 export interface RtServer {
   httpServer: http.Server;
@@ -52,12 +55,23 @@ export function createServer(opts: RtServerOptions): RtServer {
   };
 }
 
+export interface ConnectionOpts {
+  intervalMs?: number;
+  timeoutMs?: number;
+}
+
 /** One connection's lifecycle. Exported for tests. */
 export function attachConnection(
   ws: WebSocket,
   subs: SubscriberManager,
   signingKey: string,
+  opts: ConnectionOpts = {},
 ): void {
+  const hb = new Heartbeat({
+    ws,
+    intervalMs: opts.intervalMs ?? DEFAULT_PING_INTERVAL_MS,
+    timeoutMs: opts.timeoutMs ?? DEFAULT_PONG_TIMEOUT_MS,
+  });
   let authed = false;
   let channel: string | null = null;
   const handler = (message: string) => ws.send(message);
@@ -67,6 +81,10 @@ export function attachConnection(
     try {
       msg = JSON.parse(raw.toString());
     } catch {
+      return;
+    }
+    if (msg.type === 'pong') {
+      hb.markPong();
       return;
     }
     if (!authed && msg.type === 'auth' && typeof msg.token === 'string') {
@@ -79,10 +97,12 @@ export function attachConnection(
       channel = `tenant:${claims.tenantId}:events`;
       await subs.subscribe(channel, handler);
       ws.send(JSON.stringify({ type: 'hello', tenant_id: claims.tenantId }));
+      hb.start();
     }
   });
 
   ws.on('close', () => {
+    hb.stop();
     if (channel) void subs.unsubscribe(channel, handler);
   });
 }
