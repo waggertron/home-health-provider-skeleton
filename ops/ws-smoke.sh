@@ -16,7 +16,8 @@ API_URL=${API_URL:-http://localhost:8000}
 RT_URL=${RT_URL:-ws://localhost:8080}
 EMAIL=${EMAIL:-admin@westside.demo}
 PASSWORD=${PASSWORD:-demo1234}
-TIMEOUT_MS=${TIMEOUT_MS:-5000}
+# Solver budget defaults to 10s; allow 15s for the full round-trip.
+TIMEOUT_MS=${TIMEOUT_MS:-15000}
 
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${THIS_DIR}/.." && pwd)"
@@ -40,12 +41,10 @@ ws_token=$(curl -sfS -X POST "${API_URL}/api/v1/auth/ws-token" \
 echo "→ open ws, wait for schedule.optimized"
 (
   cd "${RT_DIR}"
-  node scripts/ws-client.mjs "${RT_URL}/ws" "${ws_token}" schedule.optimized "${TIMEOUT_MS}" &
-  echo $! > /tmp/hhps-ws-smoke.pid
-  wait
+  exec node scripts/ws-client.mjs "${RT_URL}/ws" "${ws_token}" schedule.optimized "${TIMEOUT_MS}"
 ) &
 smoke_pid=$!
-# Give the client a beat to connect + subscribe.
+# Give the client a beat to connect + subscribe before we trigger the solve.
 sleep 1
 
 echo "→ POST /schedule/${today}/optimize"
