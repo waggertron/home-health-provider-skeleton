@@ -30,7 +30,7 @@ jobs:
       POSTGRES_USER: hhps
       POSTGRES_PASSWORD: hhps_dev_only
       POSTGRES_DB: hhps_test
-      DJANGO_SECRET_KEY: ci-secret
+      DJANGO_SECRET_KEY: ci-secret-long-enough-for-hs256-signing-0123456789abcdef
       DJANGO_DEBUG: "0"
       DEMO_PASSWORD: demo1234
 

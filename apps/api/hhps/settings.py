@@ -70,10 +70,23 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
+# Ensure the HMAC signing key is always at least 32 bytes so PyJWT doesn't
+# emit InsecureKeyLengthWarning under short dev/test SECRET_KEY values. In
+# production, SECRET_KEY must be generated long in the first place; this
+# guard exists so short test keys don't corrupt local/CI output.
+import hashlib
+
+_SIGNING_KEY = (
+    SECRET_KEY
+    if len(SECRET_KEY.encode("utf-8")) >= 32
+    else hashlib.sha256(SECRET_KEY.encode("utf-8")).hexdigest()
+)
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "AUTH_HEADER_TYPES": ("Bearer",),
+    "SIGNING_KEY": _SIGNING_KEY,
 }
 
 LANGUAGE_CODE = "en-us"
