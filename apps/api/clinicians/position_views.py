@@ -16,6 +16,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.events import clinician_position_updated, publish
 from core.permissions import IsClinician, IsSchedulerOrAdmin
 
 from .models import Clinician, ClinicianPosition
@@ -37,7 +38,8 @@ class ClinicianPositionCreateView(generics.CreateAPIView):
         clinician = Clinician.objects.filter(user_id=user_id, tenant=tenant).first()
         if clinician is None:
             raise PermissionDenied("Authenticated user is not a registered clinician.")
-        serializer.save(tenant=tenant, clinician=clinician)
+        position = serializer.save(tenant=tenant, clinician=clinician)
+        publish(tenant.id, clinician_position_updated(position))
 
 
 class ClinicianPositionLatestView(APIView):

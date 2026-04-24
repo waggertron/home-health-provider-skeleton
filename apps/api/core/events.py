@@ -13,11 +13,14 @@ Schema helpers build envelopes with a stable shape:
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
 import redis
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 _client: redis.Redis | None = None
 
@@ -47,8 +50,16 @@ def channel_for(tenant_id: int) -> str:
 
 
 def publish(tenant_id: int, event: dict[str, Any]) -> None:
-    """PUBLISH event as JSON on the tenant's events channel."""
-    _get_client().publish(channel_for(tenant_id), json.dumps(event))
+    """PUBLISH event as JSON on the tenant's events channel.
+
+    Fault-tolerant: a Redis outage logs a warning but does not raise —
+    event publishing is a best-effort fanout, not a correctness-critical
+    step on the primary write path.
+    """
+    try:
+        _get_client().publish(channel_for(tenant_id), json.dumps(event))
+    except redis.RedisError as exc:
+        logger.warning("events.publish failed for tenant=%s: %s", tenant_id, exc)
 
 
 # --- Schema helpers ---------------------------------------------------------

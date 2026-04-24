@@ -13,6 +13,7 @@ from datetime import date as _date
 from celery import shared_task
 from django.db import transaction
 
+from core.events import publish, schedule_optimized, visit_reassigned
 from routing.models import RoutePlan
 from scheduling.adapter import build_problem
 from scheduling.vrp import solve
@@ -57,8 +58,18 @@ def optimize_day(tenant_id: int, iso_date: str, time_budget_s: int = 10) -> dict
                     ordering_seq=seq,
                 )
 
-    return {
+    summary = {
         "routes": sum(1 for r in solution.routes if r.visit_ids),
         "unassigned": len(solution.unassigned_visit_ids),
         "total_travel_s": solution.total_travel_s,
     }
+    publish(tenant.id, schedule_optimized(tenant.id, target_date.isoformat(), summary))
+    for route in solution.routes:
+        for visit_id in route.visit_ids:
+            publish(
+                tenant.id,
+                visit_reassigned(
+                    Visit(id=visit_id, tenant_id=tenant.id, clinician_id=route.clinician_id)
+                ),
+            )
+    return summary
