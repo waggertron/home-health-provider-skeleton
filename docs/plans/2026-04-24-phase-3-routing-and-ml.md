@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Land the core differentiating IP — a Celery-backed job that takes a day's open visits and active clinicians for one tenant, solves the Vehicle Routing Problem with time windows and skill constraints via Google OR-Tools, and produces `RoutePlan` rows with per-clinician ordered visit sequences. Add a scikit-learn re-ranker on top of OR-Tools' cost function so the route-quality story matches the platform's pitch. Expose it behind an authenticated API endpoint.
+**Goal:** Land the core differentiating IP — a Celery-backed job that takes a day's open visits and active clinicians for one tenant, solves the Vehicle Routing Problem with time windows and skill constraints via Google OR-Tools, and produces `RoutePlan` rows with per-clinician ordered visit sequences. Add a scikit-learn re-ranker on top of OR-Tools' cost function so the route-quality story matches the product category's pitch. Expose it behind an authenticated API endpoint.
 
 **Architecture:**
 - New `scheduling` app houses the OR-Tools adapter, the sklearn re-ranker, and the Celery task that wires them together.

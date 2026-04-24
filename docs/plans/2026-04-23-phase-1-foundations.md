@@ -195,7 +195,7 @@ shell:
 ```markdown
 # home-health-provider-skeleton
 
-Portfolio-scale clone of a B2B home-health platform — a B2B home-health dispatching platform.
+Portfolio-scale clone of a B2B home-health dispatching platform.
 See `docs/architecture.md` for the full design and `docs/plans/` for phased implementation.
 
 ## Quick start

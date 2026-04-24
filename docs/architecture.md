@@ -6,7 +6,7 @@
 > - Phase 2 (Core Domain) delivered 2026-04-24 — eight domain models, tenant-scoped REST API, Visit state machine. 73 tests, lint/type/CI all green.
 > - Phase 3 (Routing & ML) delivered 2026-04-24 — OR-Tools VRP adapter + solver, sklearn GradientBoostingRegressor re-ranker, Celery `optimize_day` task, `POST /schedule/<date>/optimize` endpoint, Phase 3 seed scale (25 clinicians × 300 patients × 80 today-visits × 90 days of history per tenant). 103 tests.
 > - Phase 4 (Real-time) is next.
-> **Subject:** A portfolio-scale clone of a B2B home-health platform's operational platform, built to actually work end-to-end.
+> **Subject:** A portfolio-scale clone of a B2B home-health dispatching platform, built to actually work end-to-end.
 > **Repo:** `home-health-provider-skeleton`
 
 ---
@@ -15,7 +15,7 @@
 
 **Goal.** Build a working, end-to-end home-health dispatching platform as a learning / portfolio project. It must run locally and actually function — real scheduling logic, real event flow, real multi-tenant isolation — without the weight of production operations (no cloud, no PHI, no real integrations).
 
-**Modeled after.** a B2B home-health platform, Inc. (Santa Monica, YC W21) — a B2B SaaS platform for home-health agencies. Our clone mirrors the *shape* of their product: a clinician field app, an ops/dispatch console, and patient engagement, with an AI-driven routing brain underneath. See `research/axel-health-dossier.md` for the underlying research.
+**Modeled after.** A B2B SaaS platform for home-health agencies. Our clone mirrors the *shape* of that product category: a clinician field app, an ops/dispatch console, and patient engagement, with an AI-driven routing brain underneath.
 
 **Non-goals.**
 - Not a production system. No HIPAA audit, no SOC 2, no BAA, no real PHI.
@@ -33,8 +33,8 @@ Every decision below was made explicitly during scoping. These are load-bearing 
 | # | Decision | Choice | Rationale |
 |---|---|---|---|
 | 1 | Build goal | Learning / portfolio — must work end-to-end | Review-friendly, low cost, high signal |
-| 2 | Product surface | All three surfaces (clinician app, ops console, patient SMS), shallow but connected end-to-end | Demonstrates the full the reference loop in one demo |
-| 3 | Routing brain | Google OR-Tools VRP solver + ML re-ranker on top | Mirrors the platform's moat; showcases OR + ML competency |
+| 2 | Product surface | All three surfaces (clinician app, ops console, patient SMS), shallow but connected end-to-end | Demonstrates the full dispatch loop in one demo |
+| 3 | Routing brain | Google OR-Tools VRP solver + ML re-ranker on top | Mirrors the category's technical moat; showcases OR + ML competency |
 | 4 | Tenancy | Row-level multi-tenant (`tenant_id` on every domain row, middleware-scoped queries) | Industry standard B2B SaaS pattern; minimal overhead |
 | 5 | SMS / patient engagement | Simulated — messages written to a `sms_outbox` table, rendered in ops console | Zero cost, fully demo-able, no Twilio account needed |
 | 6 | Routing / travel-time | Haversine distance + fixed average speed (40 mph) | Cheapest option; known limitation: routes won't follow roads on the map |
@@ -48,7 +48,7 @@ Every decision below was made explicitly during scoping. These are load-bearing 
 | 14 | Clinical data depth | Operational-only (patient, address, window, skill, status, timestamps, free-text notes) | This is a logistics platform, not an EHR |
 | 15 | Seed world size | 2 agencies × 25 clinicians × 300 patients × ~80 visits/day, LA Basin real street addresses | Enough scale for VRP/ML to do real work; small enough to reason about |
 | 16 | Web UI kit | **HeroUI** (Tailwind-native React component library, NextUI successor) across all web surfaces | Unified look & feel across ops + marketing; modern, accessible, good defaults |
-| 17 | Marketing site | Separate Next.js app (`web-marketing`) using HeroUI — hero, features, pricing, contact | Mirrors the platform's `example.com`; demonstrates brand-facing UI chops in addition to operational UI |
+| 17 | Marketing site | Separate Next.js app (`web-marketing`) using HeroUI — hero, features, pricing, contact | Mirrors a typical B2B SaaS brand site; demonstrates brand-facing UI chops in addition to operational UI |
 | 18 | Single `docker compose up` covers everything | Yes — including the Expo dev server for the RN app | One command boots the entire platform |
 | 19 | Default demo logins | Seeded admin/scheduler/clinician accounts per tenant, all with `demo1234` password | Instant demo-ability without a registration flow |
 | 20 | Seed-on-startup | Dedicated one-shot `db-init` compose service runs migrations + idempotent seed before API starts | Deterministic, reproducible demos from a cold boot |
@@ -61,7 +61,7 @@ Every decision below was made explicitly during scoping. These are load-bearing 
 |---|---|---|
 | Mobile (clinician) | React Native via **Expo (SDK 52+)**, TypeScript | Cross-platform from one codebase; Expo Go = instant demo; RN was user-chosen. Runs inside compose via its own container, exposing Metro + Expo dev ports to the host |
 | Ops web console | **Next.js 14 (App Router)** + React + TypeScript + **HeroUI** + Tailwind | Clean SPA; HeroUI brings a consistent, accessible component system (tables, drag-and-drop, dark mode) across all web surfaces |
-| Marketing / landing site | **Next.js 14** + React + TypeScript + **HeroUI** + Tailwind | Separate app at `:3002` mirroring the platform's `example.com` — hero, features, pricing, contact form; "Book demo" CTA deep-links to the ops console |
+| Marketing / landing site | **Next.js 14** + React + TypeScript + **HeroUI** + Tailwind | Separate app at `:3002` mirroring a B2B SaaS brand site — hero, features, pricing, contact form; "Book demo" CTA deep-links to the ops console |
 | Map on ops console | **Mapbox GL JS** (free tier) with simulated travel times | Map is visually central to the demo; free tier is enough |
 | Backend API | **Django 5** + **Django REST Framework** + Python 3.12 | Django was user-chosen; DRF is the canonical REST layer |
 | Async / background work | **Celery** (worker shares Django codebase) + **Redis** broker | Hosts VRP solves, ML scoring, nightly BI rollup, simulated SMS side-effects |
@@ -220,7 +220,7 @@ Thin (~500 LOC) fanout layer. No business logic, no DB access.
 The dispatcher's cockpit. Rendered in the browser on a laptop. Uses **HeroUI** as its component library, Tailwind for utility styling. Key surfaces: login, today-board (drag-and-drop visit list + live map pins), clinician list, patient list, schedule editor, SMS log, embedded Metabase reports, settings. Served on `:3001`.
 
 ### 5.5 `web-marketing` — Next.js 14 marketing / landing site (HeroUI)
-Public-facing brand site modeled after the platform's `example.com`. Built with the same HeroUI system for visual coherence. Served on `:3002`. Routes:
+Public-facing brand site modeled after a typical B2B SaaS landing page. Built with the same HeroUI system for visual coherence. Served on `:3002`. Routes:
 - `/` — hero + value proposition + social proof + CTA
 - `/features` — three pillar cards (AI scheduling, route optimization, patient engagement)
 - `/pricing` — single tier placeholder with a "Contact sales" form

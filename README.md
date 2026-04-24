@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/waggertron/home-health-provider-skeleton/actions/workflows/ci.yml/badge.svg)](https://github.com/waggertron/home-health-provider-skeleton/actions/workflows/ci.yml)
 
-Portfolio-scale clone of [a B2B home-health platform](https://www.example.com/) — a B2B home-health dispatching platform.
+Portfolio-scale clone of a B2B home-health dispatching platform — clinician routing, ops console, patient engagement.
 Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Next.js (HeroUI)**. BI: **Metabase**.
 
 > **Status:** Phase 1 (Foundations), Phase 2 (Core Domain), and Phase 3 (Routing & ML) complete. See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
