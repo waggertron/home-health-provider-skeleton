@@ -10,6 +10,7 @@ dependencies = [
   "python-dotenv==1.0.*",
   "redis==5.0.*",
   "celery==5.4.*",
+  "ortools==9.11.*",
 ]
 
 [project.optional-dependencies]
