@@ -1,5 +1,9 @@
 research/
 
+# Local tool state (oh-my-claudecode, etc.)
+.omc/
+apps/api/.omc/
+
 # Python
 __pycache__/
 *.py[cod]
