@@ -23,3 +23,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# ML artifacts (trained locally; reproducible via manage.py train_ranker)
+apps/api/scheduling/artifacts/

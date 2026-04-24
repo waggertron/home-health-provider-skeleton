@@ -11,6 +11,8 @@ dependencies = [
   "redis==5.0.*",
   "celery==5.4.*",
   "ortools==9.11.*",
+  "scikit-learn==1.5.*",
+  "numpy==1.26.*",
 ]
 
 [project.optional-dependencies]
