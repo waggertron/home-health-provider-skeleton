@@ -5,7 +5,7 @@
 Portfolio-scale clone of [a B2B home-health platform](https://www.example.com/) — a B2B home-health dispatching platform.
 Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Next.js (HeroUI)**. BI: **Metabase**.
 
-> **Status:** Phase 1 (Foundations) and Phase 2 (Core Domain) complete. See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
+> **Status:** Phase 1 (Foundations), Phase 2 (Core Domain), and Phase 3 (Routing & ML) complete. See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
 
 ## What works today
 
@@ -24,8 +24,12 @@ Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Ne
   - `POST /positions/` — a clinician reports their own GPS ping (server derives clinician + tenant from JWT).
   - `GET /positions/latest/` — latest position per clinician for the ops map (scheduler/admin).
   - `GET /sms/` + `/:id/` — read-only SMS log (scheduler/admin).
-- **73 pytest tests** across models, auth, middleware, viewsets, custom actions, and cross-tenant isolation.
-- `ruff check`, `ruff format --check`, and `mypy` clean across 90 source files.
+  - `POST /schedule/<date>/optimize` — enqueues the OR-Tools VRP solve for a tenant/date (scheduler/admin). Returns `{job_id, status}`; Celery writes the resulting `RoutePlan` rows and stamps each affected Visit with its clinician + ordering.
+- **Routing brain:** `scheduling` app houses the OR-Tools VRP adapter, the sklearn `GradientBoostingRegressor` re-ranker, and the Celery `optimize_day` task. Haversine distance matrix + 40 mph fixed-speed travel times; credential-hierarchy skill constraints; 30-min service time; 10s solve budget. Ranker artifact lives at `apps/api/scheduling/artifacts/ranker.pkl` (gitignored) — train with `python manage.py train_ranker`.
+- **Dedicated Celery worker** container shares the API image. Tests run tasks inline via `CELERY_TASK_ALWAYS_EAGER=True` so CI doesn't need a live worker.
+- **Phase 3 seed scale:** `seed_demo --force` produces each tenant with 25 clinicians, 300 patients, 80 today-visits, and 90 days × 20 historical visits — deterministic under a tenant-seeded RNG.
+- **103 pytest tests** across models, auth, middleware, viewsets, custom actions, cross-tenant isolation, VRP adapter/solver, ML re-ranker, training, the Celery task, and the optimize endpoint.
+- `ruff check`, `ruff format --check`, and `mypy` clean across 115 source files.
 - GitHub Actions CI runs lint + typecheck + pytest on every push.
 
 ## Quick start
@@ -58,7 +62,7 @@ All seeded accounts use password **`demo1234`**.
 | `admin@westside.demo` | admin | Westside Home Health |
 | `admin@sunset.demo` | admin | Sunset Hospice |
 
-Phase 3 will expand the seed to 25 clinicians × 300 patients × 90 days of history per tenant. Phase 5 surfaces the full account list on the ops-console login screen.
+Seeded clinician accounts (25 per tenant, `cNN@{westside,sunset}.demo`) have unusable passwords — they exist so the VRP has bodies to assign visits to, not for login. Phase 5 will surface the full account list on the ops-console login screen.
 
 ## Local development (no Docker)
 
@@ -103,7 +107,9 @@ apps/
     ├── patients/     Patient CRUD
     ├── visits/       Visit model + state machine (services.py) + actions
     ├── routing/      RoutePlan model + read-only endpoint
-    └── messaging/    SmsOutbox model + read-only log
+    ├── messaging/    SmsOutbox model + read-only log
+    └── scheduling/   OR-Tools VRP adapter/solver, sklearn re-ranker,
+                      Celery optimize_day task, POST /schedule endpoint
 docs/
 ├── architecture.md   Full system design + mermaid diagrams
 └── plans/            Phased implementation plans
@@ -124,8 +130,8 @@ See [`docs/architecture.md`](docs/architecture.md) for the full system design �
 |---|---|---|
 | **1. Foundations** | ✅ complete | Bootable compose + JWT auth + tenancy + seed |
 | **2. Core domain** | ✅ complete | Clinician/Patient/Visit/RoutePlan/ClinicianPosition/SmsOutbox + tenant-scoped CRUD + Visit state machine |
-| 3. Routing & ML | 🔜 next | OR-Tools VRP + sklearn re-ranker in a Celery task |
-| 4. Real-time | planned | Node WebSocket gateway + Redis pub/sub |
+| **3. Routing & ML** | ✅ complete | OR-Tools VRP + sklearn re-ranker + Celery `optimize_day` task + `POST /schedule/<date>/optimize` endpoint |
+| 4. Real-time | 🔜 next | Node WebSocket gateway + Redis pub/sub |
 | 5. Ops web console | planned | Next.js + HeroUI dispatcher UI |
 | 6. Clinician RN app | planned | Expo + TypeScript field app |
 | 7. Marketing site | planned | Next.js + HeroUI landing page |
