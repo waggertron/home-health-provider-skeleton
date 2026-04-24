@@ -31,7 +31,21 @@ INSTALLED_APPS = [
     "visits",
     "routing",
     "messaging",
+    "scheduling",
 ]
+
+# Celery
+_REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+_REDIS_PORT = os.environ.get("REDIS_PORT", "6379")
+_REDIS_URL = f"redis://{_REDIS_HOST}:{_REDIS_PORT}"
+CELERY_BROKER_URL = f"{_REDIS_URL}/0"
+CELERY_RESULT_BACKEND = f"{_REDIS_URL}/0"
+CELERY_TASK_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "America/Los_Angeles"
+# Tests flip this to True via @override_settings to run tasks inline.
+CELERY_TASK_ALWAYS_EAGER = False
 
 AUTH_USER_MODEL = "accounts.User"
 AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
