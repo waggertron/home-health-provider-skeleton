@@ -29,11 +29,12 @@ class ClinicianPositionCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsClinician]
 
     def perform_create(self, serializer) -> None:
-        user = self.request.user
         tenant = getattr(self.request, "tenant", None)
         if tenant is None:
             raise PermissionDenied("No tenant in context.")
-        clinician = Clinician.objects.filter(user=user, tenant=tenant).first()
+        # IsClinician permission ensures user is authenticated; filter on its pk.
+        user_id = self.request.user.pk
+        clinician = Clinician.objects.filter(user_id=user_id, tenant=tenant).first()
         if clinician is None:
             raise PermissionDenied("Authenticated user is not a registered clinician.")
         serializer.save(tenant=tenant, clinician=clinician)

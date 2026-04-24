@@ -47,6 +47,7 @@ def test_clinician_posts_own_position(tenant_with_clinicians):
     assert r.status_code == 201, r.content
     assert ClinicianPosition.objects.count() == 1
     saved = ClinicianPosition.objects.first()
+    assert saved is not None
     assert saved.clinician_id == tenant_with_clinicians["clinicians"][0].id
 
 
