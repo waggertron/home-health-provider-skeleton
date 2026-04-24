@@ -21,10 +21,14 @@ export interface RtServerOptions {
   port?: number;
   redisUrl?: string;
   signingKey: string;
+  /** Pre-built Redis client (for tests). If omitted, one is created from redisUrl. */
+  redis?: Redis;
+  /** Connection-level overrides (for tests): heartbeat ping/timeout. */
+  connection?: ConnectionOpts;
 }
 
 export function createServer(opts: RtServerOptions): RtServer {
-  const redis = new Redis(opts.redisUrl ?? 'redis://cache-redis:6379/0');
+  const redis = opts.redis ?? new Redis(opts.redisUrl ?? 'redis://cache-redis:6379/0');
   const subs = new SubscriberManager(redis);
 
   const httpServer = http.createServer((req, res) => {
@@ -39,7 +43,7 @@ export function createServer(opts: RtServerOptions): RtServer {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   wss.on('connection', (ws) => {
-    attachConnection(ws, subs, opts.signingKey);
+    attachConnection(ws, subs, opts.signingKey, opts.connection);
   });
 
   return {
@@ -50,7 +54,10 @@ export function createServer(opts: RtServerOptions): RtServer {
     close: async () => {
       await new Promise<void>((r) => wss.close(() => r()));
       await new Promise<void>((r) => httpServer.close(() => r()));
-      await redis.quit();
+      // Only quit the Redis client we created ourselves.
+      if (!opts.redis && typeof redis.quit === 'function') {
+        await redis.quit();
+      }
     },
   };
 }
