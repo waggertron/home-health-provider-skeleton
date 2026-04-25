@@ -5,7 +5,7 @@
 Portfolio-scale clone of a B2B home-health dispatching platform — clinician routing, ops console, patient engagement.
 Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Next.js (HeroUI)**. BI: **Metabase**.
 
-> **Status:** Phase 1 (Foundations), Phase 2 (Core Domain), Phase 3 (Routing & ML), and Phase 4 (Real-time gateway) complete. See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
+> **Status:** Phases 1–5 complete (Foundations, Core Domain, Routing & ML, Real-time gateway, Ops web console). See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
 
 ## What works today
 
@@ -30,8 +30,9 @@ Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Ne
 - **Real-time fanout:** state changes (`visit.reassigned`, `visit.status_changed`, `schedule.optimized`, `clinician.position_updated`) publish to `tenant:{id}:events` on Redis. A new `rt-node` TypeScript gateway (`apps/rt-node/`, ~500 LOC) on `:8080` accepts WebSocket clients at `/ws`, authenticates via a 60s JWT minted by `POST /auth/ws-token`, subscribes them to their tenant's channel, and forwards JSON frames. Heartbeats every 30s; idle sockets terminated after 60s.
 - **End-to-end smoke test:** `./ops/ws-smoke.sh` logs in, mints a WS token, opens a WS, triggers an optimize, and asserts a `schedule.optimized` frame arrives within 15s.
 - **Phase 3 seed scale:** `seed_demo --force` produces each tenant with 25 clinicians, 300 patients, 80 today-visits, and 90 days × 20 historical visits — deterministic under a tenant-seeded RNG.
-- **103 pytest tests** across models, auth, middleware, viewsets, custom actions, cross-tenant isolation, VRP adapter/solver, ML re-ranker, training, the Celery task, and the optimize endpoint.
-- `ruff check`, `ruff format --check`, and `mypy` clean across 115 source files.
+- **Ops web console (`apps/web-ops/`)** — Next.js 16 + React 19 + HeroUI 3 + Tailwind 4 on `:3001`. JWT login, today board (visit grid grouped by clinician with status filter), one-click visit reassignment with optimistic React Query mutation + 409 rollback, an SVG live map of clinician positions, and read-only support pages (clinicians, patients, sms log). Subscribes to the rt-node WebSocket on mount and patches the visit/clinician caches as `visit.*`, `schedule.optimized`, and `clinician.position_updated` frames arrive.
+- **220+ tests** across the stack: 167 Python (pytest, 96% line coverage), 37 rt-node (vitest, 96.87%), 56 web-ops (vitest with React Testing Library + msw + a fake WebSocket).
+- `ruff check`, `ruff format --check`, and `mypy` clean across the Django source; `tsc --noEmit` clean across rt-node + web-ops.
 - GitHub Actions CI runs lint + typecheck + pytest on every push.
 
 ## Quick start
@@ -112,8 +113,10 @@ apps/
     ├── messaging/    SmsOutbox model + read-only log
     └── scheduling/   OR-Tools VRP adapter/solver, sklearn re-ranker,
                       Celery optimize_day task, POST /schedule endpoint
-└── rt-node/          Node 20 + TS WebSocket gateway (Phase 4),
-                      Redis pub/sub fanout, JWT auth on connect
+├── rt-node/          Node 20 + TS WebSocket gateway (Phase 4),
+│                     Redis pub/sub fanout, JWT auth on connect
+└── web-ops/          Next.js 16 + HeroUI 3 ops console (Phase 5),
+                      today board, reassign modal, live ops map
 docs/
 ├── architecture.md   Full system design + mermaid diagrams
 └── plans/            Phased implementation plans
@@ -136,7 +139,8 @@ See [`docs/architecture.md`](docs/architecture.md) for the full system design �
 | **2. Core domain** | ✅ complete | Clinician/Patient/Visit/RoutePlan/ClinicianPosition/SmsOutbox + tenant-scoped CRUD + Visit state machine |
 | **3. Routing & ML** | ✅ complete | OR-Tools VRP + sklearn re-ranker + Celery `optimize_day` task + `POST /schedule/<date>/optimize` endpoint |
 | **4. Real-time** | ✅ complete | Node 20 + TypeScript WebSocket gateway, Redis pub/sub fanout, 60s WS-auth tokens, end-to-end smoke test |
-| 5. Ops web console | 🔜 next | Next.js + HeroUI dispatcher UI |
+| **5. Ops web console** | ✅ complete | Next.js 16 + HeroUI 3 dispatcher UI: today board, optimize button, click-to-reassign modal, live SVG map, support list pages |
+| 6. Clinician RN app | 🔜 next | Expo + TypeScript field app |
 | 5. Ops web console | planned | Next.js + HeroUI dispatcher UI |
 | 6. Clinician RN app | planned | Expo + TypeScript field app |
 | 7. Marketing site | planned | Next.js + HeroUI landing page |

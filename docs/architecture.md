@@ -6,7 +6,8 @@
 > - Phase 2 (Core Domain) delivered 2026-04-24 — eight domain models, tenant-scoped REST API, Visit state machine. 73 tests, lint/type/CI all green.
 > - Phase 3 (Routing & ML) delivered 2026-04-24 — OR-Tools VRP adapter + solver, sklearn GradientBoostingRegressor re-ranker, Celery `optimize_day` task, `POST /schedule/<date>/optimize` endpoint, Phase 3 seed scale (25 clinicians × 300 patients × 80 today-visits × 90 days of history per tenant). 103 tests.
 > - Phase 4 (Real-time) delivered 2026-04-24 — `core.events.publish()` + tenant-scoped Redis channels, every Phase 3 write path emits events, `POST /auth/ws-token` mints 60s JWTs with `scope="ws"`, `apps/rt-node/` TypeScript gateway (`:8080`) authenticates WS clients and fans messages out, application-level heartbeats, end-to-end smoke test in `ops/ws-smoke.sh`. 196+ tests across Python + Node, 96%+ coverage on both sides.
-> - Phase 5 (Ops web console) is next.
+> - Phase 5 (Ops web console) delivered 2026-04-24 — `apps/web-ops/` Next.js 16 + React 19 + HeroUI 3 + Tailwind 4 SPA on `:3001`. JWT login + route guard, today board with status filter + Optimize Day, click-to-reassign modal with optimistic mutation + 409 rollback, SVG live ops map driven by `clinician.position_updated`, and read-only clinicians / patients / sms pages. 56 vitest cases on the React side; 220+ tests stackwide.
+> - Phase 6 (Clinician RN app) is next.
 > **Subject:** A portfolio-scale clone of a B2B home-health dispatching platform, built to actually work end-to-end.
 > **Repo:** `home-health-provider-skeleton`
 
