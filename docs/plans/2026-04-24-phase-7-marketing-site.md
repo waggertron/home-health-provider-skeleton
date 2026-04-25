@@ -1,23 +1,54 @@
-# Phase 7: Marketing / Landing Site Implementation Plan — DRAFT
+# Phase 7: Marketing / Landing Site Implementation Plan
 
-> **Status:** Skeleton. Will be expanded into a task list when Phase 6 closes.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** A small Next.js + HeroUI brand site (`apps/web-marketing/`, port 3002) that demonstrates the project's brand-facing UI chops and deep-links to the ops console for the demo CTA. No authentication; statically generated where possible.
+## Goal
 
-**Architecture:**
-- New `apps/web-marketing/` Next.js 14 App Router, TypeScript, HeroUI, Tailwind.
-- Routes: `/`, `/features`, `/pricing`, `/contact`, `/app` (deep-link redirect to `:3001`).
-- The contact form writes a row to a small `inquiry_log` model exposed by the existing Django API — no real email integration.
+A static-ish brand site at `apps/web-marketing/` (`:3002`) that demonstrates
+brand-facing UI chops alongside the operational ones, deep-links to the ops
+console at `/app`, and boots inside the same compose stack.
 
-**Provisional task list (to be sharpened):**
-1. Scaffold + design system reuse from `apps/web-ops/`.
-2. Hero + value-prop landing.
-3. Features grid (three pillar cards).
-4. Pricing tier placeholder + contact form.
-5. Static SEO meta + sitemap.
-6. Compose service wiring + docs close.
+## Pragmatic scope
 
-**Phase 7 DoD (sketch):**
-- `:3002` serves the brand site under HeroUI; lighthouse perf > 90 on the home route.
-- Contact form posts an inquiry row visible via the ops console SMS/inquiry log.
+The original draft sketched four separate routes (`/`, `/features`,
+`/pricing`, `/contact`) plus an inquiry-log API integration. For a portfolio
+demo that's a lot of surface for low marginal value. Phase 7 ships a single
+scrolling landing page (`/`) with hero, features grid, pricing, and contact
+section as in-page anchors, plus an `/app` deep-link. The contact form is
+inert — clicking submit shows a "Demo only" notice. No new Django models.
+
+## Architecture
+
+- New `apps/web-marketing/` Next.js 16 + React 19 + HeroUI 3 + Tailwind 4 app
+  (mirror of the Phase 5 stack so dependency drift stays low).
+- Static rendering throughout.
+- Theme tweaked toward the brand (lighter than ops, prominent CTA), but uses
+  the same HeroUI primitives.
+
+## Task list
+
+1. **T1 — Scaffold + landing page (one commit).** New `apps/web-marketing/`
+   with the Phase 5 toolchain (package.json + tsconfig + next.config + tailwind
+   CSS-import + vitest). Single `app/page.tsx` rendering hero, three-card
+   features section, pricing-tier card, and contact section. Top nav with a
+   "Open the demo" CTA pointing at `http://localhost:3001`. One vitest
+   smoke that renders the page.
+2. **T2 — Compose service + Dockerfile.** Multi-stage `apps/web-marketing/
+   Dockerfile`; `web-marketing` service in `docker-compose.yml` on `:3002`;
+   Makefile gains `verify-marketing`. Manual smoke: `make up`, GET
+   http://localhost:3002 → 200.
+3. **T3 — Docs close + plan to history.** README + architecture roadmap
+   flip; project layout includes apps/web-marketing/; plan moves to
+   docs/plans/history/.
+
+## Out of scope
+
+- Real contact form / inquiry log model.
+- Per-route SEO + sitemap beyond the home `<head>` meta.
+- A11y/lighthouse perf tuning beyond defaults.
+
+## Verification
+
+- `make verify-marketing` clean (typecheck + 1 vitest).
+- `make up` brings web-marketing healthy on `:3002`.
 - Roadmap row flips to ✅.
