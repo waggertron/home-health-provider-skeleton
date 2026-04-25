@@ -687,4 +687,52 @@ GitHub Actions: lint (ruff + eslint), typecheck (mypy loose + tsc strict), test 
 
 ---
 
+## 16. v1 Status Snapshot (2026-04-25)
+
+All nine roadmap phases delivered. Compose stack boots end-to-end with one
+command; the dispatcher↔clinician loop fires within ~1s.
+
+### Live ports
+
+| Port | Service | Notes |
+|---|---|---|
+| 3000 | bi-metabase | First-boot wizard; points at `db-postgres` |
+| 3001 | web-ops | `/today` + `/clinician` per role |
+| 3002 | web-marketing | Static brand site, deep-links to ops |
+| 8000 | api-django | DRF + JWT |
+| 8080 | rt-node | WebSocket gateway, JWT-auth on `/ws` |
+| 5432 | db-postgres | OLTP + reporting tables |
+| 6379 | cache-redis | Celery broker + tenant pub/sub |
+
+### Test + coverage at v1 close
+
+| Lane | Tests | Coverage | Tooling |
+|---|---|---|---|
+| api (Django) | 182 | ~96% line | pytest + pytest-cov |
+| rt-node | 37 | ~96% line | vitest + @vitest/coverage-v8 |
+| web-ops | 72 | — | vitest + RTL |
+| web-marketing | 4 | — | vitest + RTL |
+| **Total** | **295** | | `make verify-all` runs them all |
+
+End-to-end demo path covered by `ops/full-demo.sh` (asserts
+`schedule.optimized`, `visit.status_changed`, and
+`clinician.position_updated` all land on the WS gateway after the
+trigger sequence).
+
+### Known gap-list (intentionally deferred)
+
+- Native Expo build for the clinician app — web-first view ships the
+  same demo loop without the native bundler tax.
+- Playwright e2e suite — replaced by the bash-based `ops/full-demo.sh`.
+- Multi-schema OLTP/OLAP separation — reporting tables live in the
+  default Postgres schema; populated only by the rollup task, never by
+  request-path code.
+- Per-tenant Metabase row-level filtering — Metabase's built-in
+  permissions are enough for the demo.
+- Pre-provisioned Metabase dashboards — first-boot is interactive.
+- Embedded Metabase iframes inside the ops console.
+- Recorded demo video / GIFs — left to the project owner.
+
+---
+
 *This document will evolve. Any change to the decisions in Section 2 requires explicit scope re-approval and an update to all downstream sections.*
