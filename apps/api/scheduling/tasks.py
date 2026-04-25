@@ -18,7 +18,7 @@ from routing.models import RoutePlan
 from scheduling.adapter import build_problem
 from scheduling.vrp import solve
 from tenancy.models import Tenant
-from visits.models import Visit
+from visits.models import Visit, VisitStatus
 
 _SOLVER_VERSION = "phase3-t7"
 
@@ -53,7 +53,20 @@ def optimize_day(tenant_id: int, iso_date: str, time_budget_s: int = 10) -> dict
                 },
             )
             for seq, visit_id in enumerate(route.visit_ids):
-                Visit.objects.filter(id=visit_id, tenant=tenant).update(
+                # Stamp clinician + ordering on every assigned visit; promote
+                # SCHEDULED rows to ASSIGNED so the clinician's check-in path
+                # accepts them. Visits already further along (en_route /
+                # on_site / completed) keep their existing status.
+                Visit.objects.filter(
+                    id=visit_id, tenant=tenant, status=VisitStatus.SCHEDULED
+                ).update(
+                    clinician_id=route.clinician_id,
+                    ordering_seq=seq,
+                    status=VisitStatus.ASSIGNED,
+                )
+                Visit.objects.filter(id=visit_id, tenant=tenant).exclude(
+                    status=VisitStatus.SCHEDULED
+                ).update(
                     clinician_id=route.clinician_id,
                     ordering_seq=seq,
                 )

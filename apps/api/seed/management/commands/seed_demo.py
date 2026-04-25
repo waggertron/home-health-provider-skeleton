@@ -218,12 +218,9 @@ class Command(BaseCommand):
             tenant = Tenant.objects.filter(name=cfg["name"]).first()
             if tenant is None:
                 continue
-            email = f"c00@{cfg['slug']}.demo"
-            user = User.objects.filter(email=email, tenant=tenant).first()
-            if user is None:
-                continue
-            user.set_password(DEMO_PASSWORD)
-            user.save(update_fields=["password"])
+            for user in User.objects.filter(tenant=tenant, role=Role.CLINICIAN):
+                user.set_password(DEMO_PASSWORD)
+                user.save(update_fields=["password"])
 
     def _already_seeded(self) -> bool:
         if Tenant.objects.count() < len(TENANTS):

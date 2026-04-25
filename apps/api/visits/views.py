@@ -1,5 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -11,12 +12,27 @@ from .models import Visit
 from .serializers import VisitSerializer
 from .services import ConflictError, assign, cancel, check_in, check_out
 
+# Actions a clinician can fire on their own assigned visits.
+_CLINICIAN_ACTIONS = {"list", "retrieve", "check_in", "check_out"}
+
 
 class VisitViewSet(BaseTenantViewSet):
-    """Full CRUD plus the visit state-machine actions."""
+    """Full CRUD plus the visit state-machine actions.
+
+    Permission shape:
+    - assign / cancel / create / update / destroy → scheduler/admin only.
+    - list / retrieve / check-in / check-out → any authenticated tenant
+      member (clinicians can see + transition their own day's visits).
+      Tenant scoping is handled by Visit.scoped; per-visit ownership is
+      enforced inside the state-machine for transitions.
+    """
 
     serializer_class = VisitSerializer
-    permission_classes = [IsSchedulerOrAdmin]
+
+    def get_permissions(self):
+        if self.action in _CLINICIAN_ACTIONS:
+            return [IsAuthenticated()]
+        return [IsSchedulerOrAdmin()]
 
     def get_queryset(self):
         return Visit.scoped.all()
