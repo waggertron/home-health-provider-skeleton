@@ -9,7 +9,8 @@
 > - Phase 5 (Ops web console) delivered 2026-04-24 — `apps/web-ops/` Next.js 16 + React 19 + HeroUI 3 + Tailwind 4 SPA on `:3001`. JWT login + route guard, today board with status filter + Optimize Day, click-to-reassign modal with optimistic mutation + 409 rollback, SVG live ops map driven by `clinician.position_updated`, and read-only clinicians / patients / sms pages. 56 vitest cases on the React side; 220+ tests stackwide.
 > - Phase 6 (Clinician view) delivered 2026-04-24 — same `apps/web-ops/` SPA gains a `/clinician` route the role-aware `(authed)` layout redirects to. Today's route in `ordering_seq` order with check-in / check-out optimistic mutations, a GPS pinger that POSTs `/positions/`, and a `seed_demo --enable-clinician-login` flag that flips `c00@<slug>.demo` to a usable demo password so the dispatcher↔clinician loop can be exercised end-to-end. Native Expo Build deferred to a follow-up. 240+ tests stackwide.
 > - Phase 7 (Marketing site) delivered 2026-04-24 — `apps/web-marketing/` Next.js 16 + HeroUI 3 single-page brand site on `:3002`. Hero + features + pricing tier + inert contact form + "Open the demo" deep-link to `:3001`. Statically prerendered.
-> - Phase 8 (BI pipeline) is next.
+> - Phase 8 (BI pipeline) delivered 2026-04-25 — new `apps/api/reporting/` Django app with `DailyClinicianStats` + `DailyAgencyStats` models, a `rollup_daily` aggregator that classifies on-time vs late at a 15-min grace + sums SmsOutbox activity, a `manage.py rollup` command + Celery Beat schedule at 02:00 local, and a `bi-metabase` compose service on `:3000` for dashboarding. Multi-schema separation deferred — reporting tables live in the default schema, populated only by the rollup task.
+> - Phase 9 (E2E + polish) is next.
 > **Subject:** A portfolio-scale clone of a B2B home-health dispatching platform, built to actually work end-to-end.
 > **Repo:** `home-health-provider-skeleton`
 

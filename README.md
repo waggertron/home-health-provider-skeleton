@@ -5,7 +5,7 @@
 Portfolio-scale clone of a B2B home-health dispatching platform — clinician routing, ops console, patient engagement.
 Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Next.js (HeroUI)**. BI: **Metabase**.
 
-> **Status:** Phases 1–7 complete (Foundations, Core Domain, Routing & ML, Real-time gateway, Ops web console, Clinician view, Marketing site). See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
+> **Status:** Phases 1–8 complete (Foundations, Core Domain, Routing & ML, Real-time gateway, Ops web console, Clinician view, Marketing site, BI pipeline). See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
 
 ## What works today
 
@@ -33,6 +33,7 @@ Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Ne
 - **Ops web console (`apps/web-ops/`)** — Next.js 16 + React 19 + HeroUI 3 + Tailwind 4 on `:3001`. JWT login, today board (visit grid grouped by clinician with status filter), one-click visit reassignment with optimistic React Query mutation + 409 rollback, an SVG live map of clinician positions, and read-only support pages (clinicians, patients, sms log). Subscribes to the rt-node WebSocket on mount and patches the visit/clinician caches as `visit.*`, `schedule.optimized`, and `clinician.position_updated` frames arrive.
 - **Clinician view (Phase 6, web-first)** — same `apps/web-ops/` SPA renders a `/clinician` route when `user.role === 'clinician'`: today's visits in `ordering_seq` order, primary action button per status (Check In → on_site, Check Out → completed), and a "Send GPS" button that posts to `/positions/` so the dispatcher's map marker actually moves. The `(authed)` layout redirects each role to its right surface. `seed_demo --enable-clinician-login` flips `c00@<slug>.demo` to a usable `demo1234` password so the demo loop can be exercised end-to-end without an Expo build.
 - **Marketing site (`apps/web-marketing/`)** — Next.js 16 + HeroUI 3 brand site on `:3002`. Single-page hero + features grid + pricing tier + (inert) contact form, with an "Open the demo" CTA that deep-links to `:3001`. Statically prerendered.
+- **BI pipeline (`apps/api/reporting/`)** — `DailyClinicianStats` + `DailyAgencyStats` populated by `python manage.py rollup [--date YYYY-MM-DD]` or the Celery Beat task at 02:00 local. Visit COMPLETED rows are classified on-time vs late at a 15-min grace; SmsOutbox counts feed the agency stats. Metabase OSS boots on `:3000` (first-boot wizard points at `db-postgres` to chart the `reporting_*` tables).
 - **240+ tests** across the stack: 170 Python (pytest, 96% line coverage), 37 rt-node (vitest, 96.87%), 72 web-ops (vitest with React Testing Library + msw + a fake WebSocket).
 - `ruff check`, `ruff format --check`, and `mypy` clean across the Django source; `tsc --noEmit` clean across rt-node + web-ops.
 - GitHub Actions CI runs lint + typecheck + pytest on every push.
@@ -146,7 +147,8 @@ See [`docs/architecture.md`](docs/architecture.md) for the full system design �
 | **5. Ops web console** | ✅ complete | Next.js 16 + HeroUI 3 dispatcher UI: today board, optimize button, click-to-reassign modal, live SVG map, support list pages |
 | **6. Clinician view** | ✅ complete | Web-first `/clinician` route: today's route, check-in / check-out actions, GPS pinger. Native Expo deferred. |
 | **7. Marketing site** | ✅ complete | Next.js 16 + HeroUI brand site at `:3002` with hero / features / pricing / contact, deep-links into the demo |
-| 8. BI pipeline | 🔜 next | Reporting schema + nightly Celery rollup + Metabase |
+| **8. BI pipeline** | ✅ complete | Reporting models + `manage.py rollup` + Celery Beat at 02:00 + Metabase on `:3000` |
+| 9. E2E + polish | 🔜 next | Playwright scenario + demo video + README polish |
 | 5. Ops web console | planned | Next.js + HeroUI dispatcher UI |
 | 6. Clinician RN app | planned | Expo + TypeScript field app |
 | 7. Marketing site | planned | Next.js + HeroUI landing page |
