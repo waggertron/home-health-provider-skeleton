@@ -48,6 +48,16 @@ CELERY_TIMEZONE = "America/Los_Angeles"
 # Tests flip this to True via @override_settings to run tasks inline.
 CELERY_TASK_ALWAYS_EAGER = False
 
+# Phase 8: nightly BI rollup at 02:00 local. Runs on the worker-beat
+# service; multi-replica deploys would need a Beat-compatible scheduler
+# (single replica today).
+CELERY_BEAT_SCHEDULE = {
+    "rollup-daily": {
+        "task": "reporting.rollup_daily",
+        "schedule": {"hour": 2, "minute": 0},
+    },
+}
+
 # Phase 4 events: publish domain events on tenant-scoped channels for rt-node fanout.
 # Same Redis instance as the broker; PUBLISH is distinct from queue semantics.
 EVENTS_REDIS_URL = f"{_REDIS_URL}/0"
