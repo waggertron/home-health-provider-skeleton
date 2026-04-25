@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@heroui/react';
+import { MyRoute } from '@/components/MyRoute';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ClinicianPage() {
@@ -12,17 +13,19 @@ export default function ClinicianPage() {
           <CardTitle>My route · {user?.email}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm opacity-70">Tenant {user?.tenant_id} · role {user?.role}</p>
-          <p className="text-sm mt-2">Today's visits land in T4. Position pinger lands in T5.</p>
+          <p className="text-sm opacity-70">
+            Tenant {user?.tenant_id} · clinician #{user?.clinician_id ?? '—'}
+          </p>
           <button
             type="button"
             onClick={logout}
-            className="mt-4 text-sm text-blue-400 underline"
+            className="mt-2 text-sm text-blue-400 underline"
           >
             Sign out
           </button>
         </CardContent>
       </Card>
+      <MyRoute clinicianId={user?.clinician_id ?? undefined} tenantId={user?.tenant_id} />
     </main>
   );
 }
