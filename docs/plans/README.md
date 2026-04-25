@@ -2,7 +2,8 @@
 
 Each phase has a self-contained plan: goal, architecture sketch, ordered task list, key design notes, and a Definition of Done. Plans are written before code; tasks land in main as a series of TDD-tight commits with `make verify-all` green at every step.
 
-Completed plans live under [`history/`](history/) so this directory only shows what's in flight or queued.
+All nine phases complete. Each plan now lives under [`history/`](history/);
+this index is preserved as the project's per-phase changelog.
 
 | # | Phase | Status | Plan |
 |---|---|---|---|
@@ -14,7 +15,9 @@ Completed plans live under [`history/`](history/) so this directory only shows w
 | 6 | Clinician view | ✅ complete | [history/2026-04-24-phase-6-clinician-rn-app.md](history/2026-04-24-phase-6-clinician-rn-app.md) |
 | 7 | Marketing site | ✅ complete | [history/2026-04-24-phase-7-marketing-site.md](history/2026-04-24-phase-7-marketing-site.md) |
 | 8 | BI pipeline | ✅ complete | [history/2026-04-24-phase-8-bi-pipeline.md](history/2026-04-24-phase-8-bi-pipeline.md) |
-| 9 | E2E + polish | 🚧 next | [2026-04-24-phase-9-e2e-polish.md](2026-04-24-phase-9-e2e-polish.md) |
+| 9 | E2E + polish | ✅ complete | [history/2026-04-24-phase-9-e2e-polish.md](history/2026-04-24-phase-9-e2e-polish.md) |
+
+**Project status: v1 portfolio-ready.**
 
 See [`../architecture.md`](../architecture.md) for the system design those plans implement.
 

@@ -10,7 +10,9 @@
 > - Phase 6 (Clinician view) delivered 2026-04-24 — same `apps/web-ops/` SPA gains a `/clinician` route the role-aware `(authed)` layout redirects to. Today's route in `ordering_seq` order with check-in / check-out optimistic mutations, a GPS pinger that POSTs `/positions/`, and a `seed_demo --enable-clinician-login` flag that flips `c00@<slug>.demo` to a usable demo password so the dispatcher↔clinician loop can be exercised end-to-end. Native Expo Build deferred to a follow-up. 240+ tests stackwide.
 > - Phase 7 (Marketing site) delivered 2026-04-24 — `apps/web-marketing/` Next.js 16 + HeroUI 3 single-page brand site on `:3002`. Hero + features + pricing tier + inert contact form + "Open the demo" deep-link to `:3001`. Statically prerendered.
 > - Phase 8 (BI pipeline) delivered 2026-04-25 — new `apps/api/reporting/` Django app with `DailyClinicianStats` + `DailyAgencyStats` models, a `rollup_daily` aggregator that classifies on-time vs late at a 15-min grace + sums SmsOutbox activity, a `manage.py rollup` command + Celery Beat schedule at 02:00 local, and a `bi-metabase` compose service on `:3000` for dashboarding. Multi-schema separation deferred — reporting tables live in the default schema, populated only by the rollup task.
-> - Phase 9 (E2E + polish) is next.
+> - Phase 9 (E2E + polish) delivered 2026-04-25 — `ops/full-demo.sh` end-to-end smoke (login → optimize → check-in → GPS → asserts the three WS frames land); permission-shape fix on the visit viewset (clinicians can list + check-in / check-out their own visits); `optimize_day` now flips SCHEDULED→ASSIGNED so the state machine accepts check-ins; CI gains rt-node + web-ops + web-marketing jobs alongside api; README adds a "Run the demo in five minutes" block + service URL table; architecture.md gains a v1 status snapshot.
+>
+> **Project status: v1 portfolio-ready.** 295 tests across the four lanes, all green. Single `make up` boots the entire stack on `:3000`/`3001`/`3002`/`8000`/`8080`/`5432`/`6379`.
 > **Subject:** A portfolio-scale clone of a B2B home-health dispatching platform, built to actually work end-to-end.
 > **Repo:** `home-health-provider-skeleton`
 

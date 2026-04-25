@@ -5,7 +5,7 @@
 Portfolio-scale clone of a B2B home-health dispatching platform — clinician routing, ops console, patient engagement.
 Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Next.js (HeroUI)**. BI: **Metabase**.
 
-> **Status:** Phases 1–8 complete (Foundations, Core Domain, Routing & ML, Real-time gateway, Ops web console, Clinician view, Marketing site, BI pipeline). See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
+> **Status: v1 portfolio-ready (2026-04-25).** All nine roadmap phases delivered. The dispatcher↔clinician demo loop fires end-to-end via `make up` + `ops/full-demo.sh`. See [`docs/plans/`](docs/plans/) for the per-phase implementation plans and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams + a v1 status snapshot at the end).
 
 ## What works today
 
@@ -165,7 +165,7 @@ See [`docs/architecture.md`](docs/architecture.md) for the full system design �
 | **6. Clinician view** | ✅ complete | Web-first `/clinician` route: today's route, check-in / check-out actions, GPS pinger. Native Expo deferred. |
 | **7. Marketing site** | ✅ complete | Next.js 16 + HeroUI brand site at `:3002` with hero / features / pricing / contact, deep-links into the demo |
 | **8. BI pipeline** | ✅ complete | Reporting models + `manage.py rollup` + Celery Beat at 02:00 + Metabase on `:3000` |
-| 9. E2E + polish | 🔜 next | Playwright scenario + demo video + README polish |
+| **9. E2E + polish** | ✅ complete | `ops/full-demo.sh` end-to-end smoke + four-lane CI + "Run the demo in five minutes" README block |
 | 5. Ops web console | planned | Next.js + HeroUI dispatcher UI |
 | 6. Clinician RN app | planned | Expo + TypeScript field app |
 | 7. Marketing site | planned | Next.js + HeroUI landing page |
