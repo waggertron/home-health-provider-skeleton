@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "routing",
     "messaging",
     "scheduling",
+    "reporting",
 ]
 
 # Celery
