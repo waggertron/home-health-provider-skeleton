@@ -26,7 +26,12 @@ def one_completed_visit(db):
         user=user, tenant=tenant, credential=Credential.RN, home_lat=0, home_lon=0
     )
     patient = Patient.objects.create(
-        tenant=tenant, name="P", phone="+1", address="x", lat=0, lon=0,
+        tenant=tenant,
+        name="P",
+        phone="+1",
+        address="x",
+        lat=0,
+        lon=0,
         required_skill=Credential.RN,
     )
     Visit.objects.create(

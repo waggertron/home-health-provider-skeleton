@@ -1,6 +1,7 @@
 """Celery task wrapper for the daily rollup."""
 
-from datetime import date as _date, datetime, timedelta
+from datetime import date as _date
+from datetime import datetime, timedelta
 
 from celery import shared_task
 from django.utils import timezone
