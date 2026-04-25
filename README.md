@@ -38,37 +38,54 @@ Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Ne
 - `ruff check`, `ruff format --check`, and `mypy` clean across the Django source; `tsc --noEmit` clean across rt-node + web-ops.
 - GitHub Actions CI runs lint + typecheck + pytest on every push.
 
-## Quick start
+## Run the demo in five minutes
 
 ```bash
+git clone <this-repo> && cd home-health-provider-skeleton
 cp .env.example .env
 make up
+# Optional: enable a usable password on every clinician account so the
+# clinician view can log in (default leaves them unusable).
+docker compose exec api-django python manage.py seed_demo --force --enable-clinician-login
 ```
 
-Then visit http://localhost:8000/api/v1/health and try logging in:
+Once `make up` settles you have:
+
+| Service | URL | What it is |
+|---|---|---|
+| Marketing site | http://localhost:3002 | Public brand page · "Open the demo" button deep-links to ops |
+| Ops console | http://localhost:3001 | Dispatcher SPA · log in with `admin@westside.demo` |
+| Clinician view | http://localhost:3001/clinician | Auto-redirect target for any clinician-role login |
+| API | http://localhost:8000/api/v1/ | Django REST surface |
+| Real-time gateway | ws://localhost:8080/ws | rt-node WebSocket fanout |
+| Metabase | http://localhost:3000 | First-boot wizard → point at `db-postgres` / `hhps` / `hhps` |
+
+**The dispatcher↔clinician loop:**
+
+1. Open http://localhost:3001 in tab A, log in as `admin@westside.demo` / `demo1234`. The today board lists 80 scheduled visits.
+2. Click **Optimize Day**. After ~10s the OR-Tools VRP finishes and the board repaints with `assigned` cards stamped per clinician.
+3. Open a second tab on http://localhost:3001 and log in as any clinician account that got visits (e.g. `c00@westside.demo`). The `(authed)` layout redirects you to `/clinician`.
+4. Tap **Check In** on the first visit. Tab A's matching card flips to `on_site` within ~1s.
+5. Tap **Send GPS**. Tab A's ops map marker for that clinician moves within ~1s.
+
+End-to-end, no human-in-the-loop:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@westside.demo","password":"demo1234"}'
+./ops/full-demo.sh
 ```
 
-Smoke test the full stack end-to-end:
-
-```bash
-./ops/smoke-test.sh
-```
+…which automates the same flow via the API + WebSocket gateway and exits 0 when all three frames (`schedule.optimized`, `visit.status_changed`, `clinician.position_updated`) have landed.
 
 ## Demo logins
 
-All seeded accounts use password **`demo1234`**.
+All seeded accounts use password **`demo1234`** (clinicians require `--enable-clinician-login` on seed).
 
 | Email | Role | Tenant |
 |---|---|---|
 | `admin@westside.demo` | admin | Westside Home Health |
 | `admin@sunset.demo` | admin | Sunset Hospice |
-
-Seeded clinician accounts (25 per tenant, `cNN@{westside,sunset}.demo`) have unusable passwords — they exist so the VRP has bodies to assign visits to, not for login. Phase 5 will surface the full account list on the ops-console login screen.
+| `c00@westside.demo` … `c24@westside.demo` | clinician | Westside Home Health |
+| `c00@sunset.demo` … `c24@sunset.demo` | clinician | Sunset Hospice |
 
 ## Local development (no Docker)
 
