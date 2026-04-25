@@ -1,6 +1,7 @@
 .PHONY: up down reseed logs test lint type fmt shell sync verify \
         test-node lint-node type-node verify-node verify-all \
         test-web type-web verify-web \
+        test-marketing type-marketing verify-marketing \
         cov cov-node cov-web cov-all
 
 # The full set of first-party Python packages — keep in sync with
@@ -60,7 +61,16 @@ type-web:
 
 verify-web: type-web test-web
 
-verify-all: verify verify-node verify-web
+# web-marketing (Phase 7): Next.js + HeroUI brand site.
+test-marketing:
+	cd apps/web-marketing && npm test
+
+type-marketing:
+	cd apps/web-marketing && npm run typecheck
+
+verify-marketing: type-marketing test-marketing
+
+verify-all: verify verify-node verify-web verify-marketing
 
 # Coverage reports. Python target aborts if overall coverage drops below 80%.
 cov:
