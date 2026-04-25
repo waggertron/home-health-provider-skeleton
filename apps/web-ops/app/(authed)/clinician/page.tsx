@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@heroui/react';
 import { MyRoute } from '@/components/MyRoute';
+import { PositionPinger } from '@/components/PositionPinger';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ClinicianPage() {
@@ -12,14 +13,15 @@ export default function ClinicianPage() {
         <CardHeader>
           <CardTitle>My route · {user?.email}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <p className="text-sm opacity-70">
             Tenant {user?.tenant_id} · clinician #{user?.clinician_id ?? '—'}
           </p>
+          <PositionPinger />
           <button
             type="button"
             onClick={logout}
-            className="mt-2 text-sm text-blue-400 underline"
+            className="text-sm text-blue-400 underline"
           >
             Sign out
           </button>
