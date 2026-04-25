@@ -6,7 +6,7 @@
 
 # The full set of first-party Python packages — keep in sync with
 # apps/api/hhps/settings.py::INSTALLED_APPS (minus django built-ins).
-API_APPS := hhps tenancy accounts core seed clinicians patients visits routing messaging scheduling
+API_APPS := hhps tenancy accounts core seed clinicians patients visits routing messaging scheduling reporting
 
 sync:
 	cd apps/api && uv sync --extra dev
