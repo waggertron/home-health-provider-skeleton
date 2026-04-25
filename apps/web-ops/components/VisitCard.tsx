@@ -1,7 +1,9 @@
 'use client';
 
-import { Badge, Card, CardContent, CardHeader } from '@heroui/react';
-import type { Visit } from '@/hooks/useTodayBoard';
+import { Badge, Button, Card, CardContent, CardHeader } from '@heroui/react';
+import { useState } from 'react';
+import type { Clinician, Visit } from '@/hooks/useTodayBoard';
+import { ReassignModal } from './ReassignModal';
 
 const STATUS_COLOR: Record<string, string> = {
   scheduled: 'bg-slate-700 text-slate-100',
@@ -15,10 +17,12 @@ const STATUS_COLOR: Record<string, string> = {
 
 interface VisitCardProps {
   visit: Visit;
+  clinicians?: Clinician[];
   testId?: string;
 }
 
-export function VisitCard({ visit, testId }: VisitCardProps) {
+export function VisitCard({ visit, clinicians = [], testId }: VisitCardProps) {
+  const [reassignOpen, setReassignOpen] = useState(false);
   const start = new Date(visit.window_start);
   const startLabel = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   return (
@@ -30,7 +34,19 @@ export function VisitCard({ visit, testId }: VisitCardProps) {
             {visit.status.replace('_', ' ')}
           </Badge>
         </div>
-        <span className="text-xs opacity-70">{startLabel}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs opacity-70">{startLabel}</span>
+          {visit.status === 'scheduled' && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setReassignOpen(true)}
+              aria-label={`Reassign visit ${visit.id}`}
+            >
+              Reassign
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="text-sm space-y-1">
@@ -38,6 +54,12 @@ export function VisitCard({ visit, testId }: VisitCardProps) {
           <div>Clinician: {visit.clinician ?? 'unassigned'}</div>
         </div>
       </CardContent>
+      <ReassignModal
+        visit={visit}
+        clinicians={clinicians}
+        open={reassignOpen}
+        onClose={() => setReassignOpen(false)}
+      />
     </Card>
   );
 }

@@ -29,6 +29,7 @@ export function TodayBoard({ tenantId }: TodayBoardProps) {
   }
 
   const rows: Visit[] = visits.data ?? [];
+  const clinicianRows = clinicians.data ?? [];
   const filtered = statusFilter === 'all' ? rows : rows.filter((v) => v.status === statusFilter);
 
   return (
@@ -68,7 +69,7 @@ export function TodayBoard({ tenantId }: TodayBoardProps) {
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="visit-grid">
           {filtered.map((v) => (
             <li key={v.id}>
-              <VisitCard visit={v} />
+              <VisitCard visit={v} clinicians={clinicianRows} />
             </li>
           ))}
         </ul>
