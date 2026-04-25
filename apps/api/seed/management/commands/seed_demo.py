@@ -180,12 +180,21 @@ class Command(BaseCommand):
             action="store_true",
             help="Wipe all tenants (cascades to everything) before seeding.",
         )
+        parser.add_argument(
+            "--enable-clinician-login",
+            action="store_true",
+            help="Set DEMO_PASSWORD on the first clinician account per tenant "
+            "so the Phase 6 clinician view can log in. Off by default.",
+        )
 
     def handle(self, *args, **opts) -> None:
         if opts["force"]:
             Tenant.objects.all().delete()
         elif opts["idempotent"] and self._already_seeded():
             self.stdout.write("Already seeded — skipping (use --force to reseed).")
+            if opts.get("enable_clinician_login"):
+                self._enable_clinician_login()
+                self.stdout.write(self.style.SUCCESS("Clinician login enabled."))
             return
 
         with transaction.atomic():
@@ -198,7 +207,23 @@ class Command(BaseCommand):
                 _seed_today_visits(tenant, patients, rng)
                 _seed_history_visits(tenant, clinicians, patients, rng)
 
+        if opts.get("enable_clinician_login"):
+            self._enable_clinician_login()
+
         self.stdout.write(self.style.SUCCESS("Seed complete."))
+
+    def _enable_clinician_login(self) -> None:
+        """Set a usable password on c00@<slug>.demo per tenant."""
+        for cfg in TENANTS:
+            tenant = Tenant.objects.filter(name=cfg["name"]).first()
+            if tenant is None:
+                continue
+            email = f"c00@{cfg['slug']}.demo"
+            user = User.objects.filter(email=email, tenant=tenant).first()
+            if user is None:
+                continue
+            user.set_password(DEMO_PASSWORD)
+            user.save(update_fields=["password"])
 
     def _already_seeded(self) -> bool:
         if Tenant.objects.count() < len(TENANTS):
