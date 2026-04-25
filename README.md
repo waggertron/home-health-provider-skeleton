@@ -5,7 +5,7 @@
 Portfolio-scale clone of a B2B home-health dispatching platform — clinician routing, ops console, patient engagement.
 Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Next.js (HeroUI)**. BI: **Metabase**.
 
-> **Status:** Phases 1–5 complete (Foundations, Core Domain, Routing & ML, Real-time gateway, Ops web console). See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
+> **Status:** Phases 1–6 complete (Foundations, Core Domain, Routing & ML, Real-time gateway, Ops web console, Clinician view). See [`docs/plans/`](docs/plans/) for the full roadmap and [`docs/architecture.md`](docs/architecture.md) for the system design (with mermaid diagrams).
 
 ## What works today
 
@@ -31,7 +31,8 @@ Backend: **Django 5 + DRF + Postgres**. Frontends (planned): **React Native + Ne
 - **End-to-end smoke test:** `./ops/ws-smoke.sh` logs in, mints a WS token, opens a WS, triggers an optimize, and asserts a `schedule.optimized` frame arrives within 15s.
 - **Phase 3 seed scale:** `seed_demo --force` produces each tenant with 25 clinicians, 300 patients, 80 today-visits, and 90 days × 20 historical visits — deterministic under a tenant-seeded RNG.
 - **Ops web console (`apps/web-ops/`)** — Next.js 16 + React 19 + HeroUI 3 + Tailwind 4 on `:3001`. JWT login, today board (visit grid grouped by clinician with status filter), one-click visit reassignment with optimistic React Query mutation + 409 rollback, an SVG live map of clinician positions, and read-only support pages (clinicians, patients, sms log). Subscribes to the rt-node WebSocket on mount and patches the visit/clinician caches as `visit.*`, `schedule.optimized`, and `clinician.position_updated` frames arrive.
-- **220+ tests** across the stack: 167 Python (pytest, 96% line coverage), 37 rt-node (vitest, 96.87%), 56 web-ops (vitest with React Testing Library + msw + a fake WebSocket).
+- **Clinician view (Phase 6, web-first)** — same `apps/web-ops/` SPA renders a `/clinician` route when `user.role === 'clinician'`: today's visits in `ordering_seq` order, primary action button per status (Check In → on_site, Check Out → completed), and a "Send GPS" button that posts to `/positions/` so the dispatcher's map marker actually moves. The `(authed)` layout redirects each role to its right surface. `seed_demo --enable-clinician-login` flips `c00@<slug>.demo` to a usable `demo1234` password so the demo loop can be exercised end-to-end without an Expo build.
+- **240+ tests** across the stack: 170 Python (pytest, 96% line coverage), 37 rt-node (vitest, 96.87%), 72 web-ops (vitest with React Testing Library + msw + a fake WebSocket).
 - `ruff check`, `ruff format --check`, and `mypy` clean across the Django source; `tsc --noEmit` clean across rt-node + web-ops.
 - GitHub Actions CI runs lint + typecheck + pytest on every push.
 
@@ -140,7 +141,8 @@ See [`docs/architecture.md`](docs/architecture.md) for the full system design �
 | **3. Routing & ML** | ✅ complete | OR-Tools VRP + sklearn re-ranker + Celery `optimize_day` task + `POST /schedule/<date>/optimize` endpoint |
 | **4. Real-time** | ✅ complete | Node 20 + TypeScript WebSocket gateway, Redis pub/sub fanout, 60s WS-auth tokens, end-to-end smoke test |
 | **5. Ops web console** | ✅ complete | Next.js 16 + HeroUI 3 dispatcher UI: today board, optimize button, click-to-reassign modal, live SVG map, support list pages |
-| 6. Clinician RN app | 🔜 next | Expo + TypeScript field app |
+| **6. Clinician view** | ✅ complete | Web-first `/clinician` route: today's route, check-in / check-out actions, GPS pinger. Native Expo deferred. |
+| 7. Marketing site | 🔜 next | Next.js + HeroUI brand site at `:3002` |
 | 5. Ops web console | planned | Next.js + HeroUI dispatcher UI |
 | 6. Clinician RN app | planned | Expo + TypeScript field app |
 | 7. Marketing site | planned | Next.js + HeroUI landing page |

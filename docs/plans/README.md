@@ -11,8 +11,8 @@ Completed plans live under [`history/`](history/) so this directory only shows w
 | 3 | Routing & ML | ✅ complete | [history/2026-04-24-phase-3-routing-and-ml.md](history/2026-04-24-phase-3-routing-and-ml.md) |
 | 4 | Real-time gateway | ✅ complete | [history/2026-04-24-phase-4-realtime.md](history/2026-04-24-phase-4-realtime.md) |
 | 5 | Ops web console | ✅ complete | [history/2026-04-24-phase-5-ops-console.md](history/2026-04-24-phase-5-ops-console.md) |
-| 6 | Clinician RN app | 🚧 next | [2026-04-24-phase-6-clinician-rn-app.md](2026-04-24-phase-6-clinician-rn-app.md) |
-| 7 | Marketing site | draft | [2026-04-24-phase-7-marketing-site.md](2026-04-24-phase-7-marketing-site.md) |
+| 6 | Clinician view | ✅ complete | [history/2026-04-24-phase-6-clinician-rn-app.md](history/2026-04-24-phase-6-clinician-rn-app.md) |
+| 7 | Marketing site | 🚧 next | [2026-04-24-phase-7-marketing-site.md](2026-04-24-phase-7-marketing-site.md) |
 | 8 | BI pipeline | draft | [2026-04-24-phase-8-bi-pipeline.md](2026-04-24-phase-8-bi-pipeline.md) |
 | 9 | E2E + polish | draft | [2026-04-24-phase-9-e2e-polish.md](2026-04-24-phase-9-e2e-polish.md) |
 
