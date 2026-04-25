@@ -14,6 +14,8 @@ export interface UserInfo {
   email: string;
   role: 'admin' | 'scheduler' | 'clinician';
   tenant_id?: number;
+  /** Present only for users with role === 'clinician'. */
+  clinician_id?: number | null;
 }
 
 export interface LoginResponse {
