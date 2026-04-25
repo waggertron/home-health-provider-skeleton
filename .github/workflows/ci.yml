@@ -23,6 +23,14 @@ jobs:
           --health-interval=3s
           --health-timeout=3s
           --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=3s
+          --health-timeout=3s
+          --health-retries=20
 
     env:
       POSTGRES_HOST: localhost
@@ -30,6 +38,8 @@ jobs:
       POSTGRES_USER: hhps
       POSTGRES_PASSWORD: hhps_dev_only
       POSTGRES_DB: hhps_test
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
       DJANGO_SECRET_KEY: ci-secret-long-enough-for-hs256-signing-0123456789abcdef
       DJANGO_DEBUG: "0"
       DEMO_PASSWORD: demo1234
@@ -58,7 +68,58 @@ jobs:
           uv run ruff format --check .
 
       - name: Typecheck (mypy)
-        run: uv run mypy hhps tenancy accounts core seed
+        run: uv run mypy hhps tenancy accounts core seed clinicians patients visits routing messaging scheduling reporting
 
       - name: Pytest
         run: uv run pytest -v
+
+  rt-node:
+    name: rt-node — typecheck + vitest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/rt-node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/rt-node/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  web-ops:
+    name: web-ops — typecheck + vitest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web-ops
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web-ops/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  web-marketing:
+    name: web-marketing — typecheck + vitest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web-marketing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web-marketing/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
