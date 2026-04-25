@@ -15,7 +15,7 @@ up:
 	docker compose up -d
 	@echo "Waiting for API..."
 	@until curl -sf http://localhost:8000/api/v1/health > /dev/null; do sleep 1; done
-	@echo "Up. API: http://localhost:8000  Ops: http://localhost:3001  RT: ws://localhost:8080"
+	@echo "Up. API :8000  Ops :3001  Marketing :3002  RT ws:8080"
 
 down:
 	docker compose down

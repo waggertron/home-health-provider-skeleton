@@ -92,5 +92,14 @@ services:
       rt-node:
         condition: service_started
 
+  web-marketing:
+    build:
+      context: .
+      dockerfile: apps/web-marketing/Dockerfile
+    environment:
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+    ports:
+      - "3002:3002"
+
 volumes:
   pgdata:
