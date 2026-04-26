@@ -65,7 +65,35 @@ def solve(problem: Problem, time_budget_s: int = 10) -> Solution:
         return travel + service
 
     transit_idx = routing.RegisterTransitCallback(transit_cb)
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_idx)
+
+    # Time dimension always uses the pure travel+service callback so
+    # window-feasibility is unaffected by rerank bias. The arc-cost
+    # evaluator, on the other hand, may differ per vehicle when
+    # problem.rerank_costs is set.
+    if problem.rerank_costs is None:
+        routing.SetArcCostEvaluatorOfAllVehicles(transit_idx)
+    else:
+        rerank = problem.rerank_costs
+
+        def _make_arc_cost(vehicle: int):
+            def cb(from_index: int, to_index: int) -> int:
+                from_node = manager.IndexToNode(from_index)
+                to_node = manager.IndexToNode(to_index)
+                travel = problem.distance_matrix[from_node][to_node]
+                service = 0
+                if from_node >= num_clinicians:
+                    service = problem.visits[from_node - num_clinicians].service_time_s
+                bonus = 0
+                if to_node >= num_clinicians:
+                    visit_idx = to_node - num_clinicians
+                    bonus = rerank[visit_idx][vehicle]
+                return max(0, travel + service - bonus)
+
+            return cb
+
+        for vehicle in range(num_clinicians):
+            cb_idx = routing.RegisterTransitCallback(_make_arc_cost(vehicle))
+            routing.SetArcCostEvaluatorOfVehicle(cb_idx, vehicle)
 
     routing.AddDimension(
         transit_idx,

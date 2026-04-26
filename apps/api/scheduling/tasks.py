@@ -16,11 +16,26 @@ from django.db import transaction
 from core.events import publish, schedule_optimized, visit_reassigned
 from routing.models import RoutePlan
 from scheduling.adapter import build_problem
+from scheduling.ranker import Ranker
+from scheduling.rerank import build_rerank_costs
 from scheduling.vrp import solve
 from tenancy.models import Tenant
 from visits.models import Visit, VisitStatus
 
 _SOLVER_VERSION = "phase3-t7"
+
+# Cached at module load. The Ranker reads its pickle eagerly on init and
+# falls through to a constant 0.5 if the artifact is absent. The cache
+# matters because Celery worker processes are long-lived; we don't want
+# to re-pickle.load on every optimize_day call.
+_RANKER: Ranker | None = None
+
+
+def _get_ranker() -> Ranker:
+    global _RANKER
+    if _RANKER is None:
+        _RANKER = Ranker()
+    return _RANKER
 
 
 @shared_task(name="scheduling.ping")
@@ -34,6 +49,14 @@ def optimize_day(tenant_id: int, iso_date: str, time_budget_s: int = 10) -> dict
     tenant = Tenant.objects.get(id=tenant_id)
     target_date = _date.fromisoformat(iso_date)
     problem = build_problem(tenant, target_date)
+
+    # Wire the re-ranker into the solver objective when a trained
+    # artifact is present. Without one, leave problem.rerank_costs as
+    # None so the solver uses its legacy single-callback arc cost.
+    ranker = _get_ranker()
+    if ranker.is_loaded:
+        problem.rerank_costs = build_rerank_costs(problem, ranker, tz_name=tenant.timezone or "UTC")
+
     solution = solve(problem, time_budget_s=time_budget_s)
 
     with transaction.atomic():

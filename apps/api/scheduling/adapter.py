@@ -57,6 +57,11 @@ class Problem:
     visits: list[VisitNode]
     distance_matrix: list[list[int]]
     allowed_vehicles: list[list[int]]
+    # Optional per-vehicle rerank cost adjustment for arcs ending at a
+    # visit. Shape: [v_idx][c_idx]; integer "seconds saved" (positive
+    # values bias the solver toward that pairing). When None, the solver
+    # uses a single global arc-cost evaluator (legacy path).
+    rerank_costs: list[list[int]] | None = None
 
 
 def build_problem(tenant: Tenant, target_date: date) -> Problem:

@@ -35,5 +35,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Node — per-app .gitignore covers each web/rt-node app, but a stray
+# top-level node_modules can appear if vitest is invoked from the repo
+# root by accident.
+node_modules/
+
 # ML artifacts (trained locally; reproducible via manage.py train_ranker)
 apps/api/scheduling/artifacts/

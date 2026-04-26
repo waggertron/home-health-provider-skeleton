@@ -15,20 +15,17 @@ on `main` with `make verify-all` green at every step.
 
 ## Backlog (ordered by reviewer impact, not effort)
 
-### 1. Wire the re-ranker score into the OR-Tools objective
+### 1. Wire the re-ranker score into the OR-Tools objective ✅ (2026-04-26)
 
-- **Why.** §9.3 ships the sklearn `Ranker` and the training pipeline,
-  but `solve()` doesn't yet read its score. Wiring it closes the loop
-  the architecture promises.
-- **Shape.** Per-arc cost adjustment in `scheduling/vrp.py`: subtract
-  `γ · ranker.score(features)` from the transit callback's return for
-  arcs ending at a visit node, where features are precomputed per
-  `(visit, clinician)` pair from the same data the adapter already
-  pulls.
-- **Verification.** Two solver-level pytest cases: identical problems
-  with and without an artifact pickle should produce *the same set of
-  visits assigned* but a *different ordering* when the re-ranker
-  prefers a clinician.
+- **Shipped.** `Problem.rerank_costs` field; `scheduling/rerank.py:build_rerank_costs`
+  returns a `[v_idx][c_idx]` matrix of integer "seconds saved" biases;
+  `vrp.solve` registers per-vehicle arc cost evaluators when set
+  (time-dimension callback unchanged); `optimize_day` attaches the
+  matrix only when the pickle artifact is loaded.
+- **Tests.** `test_vrp_rerank.py` (3) + `test_rerank.py` (3) — bias
+  picks vehicle A, inverted bias picks vehicle B, None preserves
+  legacy behavior; helper zero-fills disallowed pairings; helper
+  scales linearly with `gamma`.
 
 ### 2. Patient SMS confirmation public endpoint
 

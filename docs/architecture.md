@@ -703,9 +703,18 @@ Time budget defaults to 10 s but is configurable per call. The
 deterministic training rows; `train_ranker` (a management command) pickles
 the artifact.
 
-The score is **not yet integrated** into the OR-Tools objective in v1
-(it would be added as a per-arc cost adjustment). The training pipeline
-and load path are wired so the integration is a small, scoped change.
+The score **is wired into the OR-Tools objective** via
+`scheduling/rerank.py:build_rerank_costs(problem, ranker, gamma=600)`,
+which returns a `[v_idx][c_idx]` matrix of integer "seconds saved"
+biases for arcs ending at a visit. When `Problem.rerank_costs` is set,
+`solve()` registers per-vehicle arc cost evaluators (via
+`SetArcCostEvaluatorOfVehicle`) that subtract the bias from the legacy
+`travel + service` cost. The time dimension still uses the pure
+travel+service callback so window-feasibility is unaffected by rerank
+bias. `optimize_day` only attaches the rerank costs when the pickled
+artifact is present (`ranker.is_loaded`); without one, the solver uses
+the legacy single-callback path. Disallowed (visit, clinician)
+pairings always get a 0 bias regardless of score.
 
 ---
 
@@ -1136,7 +1145,7 @@ frame. This is the "is the demo working?" canary.
 
 | Lane | Framework | Tests | Coverage | Notes |
 |---|---|---|---|---|
-| api | pytest + pytest-django + pytest-cov | 182 | ~96% line | `make cov` enforces ≥ 80% |
+| api | pytest + pytest-django + pytest-cov | 188 | ~96% line | `make cov` enforces ≥ 80% |
 | rt-node | vitest + @vitest/coverage-v8 | 37 | ~96% line | `server.ts` direct-run wrapped in `c8 ignore` pragma; smoke test exercises it |
 | web-ops | vitest + @testing-library/react + jsdom 25 | 72 | (tracked, not gated) | `useRealtimeEvents` mocked in `MyRoute`/`TodayBoard` tests so it doesn't steal mocked fetches |
 | web-marketing | vitest + @testing-library/react | 4 | — | Hero / Pricing / ContactForm |
@@ -1221,7 +1230,6 @@ Subsequent boots use the volumes and start in ~10 s.
 | No full RBAC matrix | Three roles is enough for the demo | Upgrade path: move to a permissions table |
 | No cloud deployment | Cost + yak-shaving avoidance | Docker Compose runs anywhere; IaC can be added later |
 | Synthetic training data for the ML re-ranker | Can't collect real data | Document the simulation parameters; treat the re-ranker as an architectural demonstration |
-| Re-ranker not yet wired into the OR-Tools objective | Solver is already feasible without it; integration is a small scoped change | `Ranker.score` exists and is unit-tested; integration is a per-arc cost adjustment |
 | Native Expo build for the clinician app deferred | Web-first ships the same demo loop without the bundler tax | `/clinician` route on `web-ops` is the v1 surface |
 | Multi-schema OLTP/OLAP separation deferred | Reporting tables only get writes from the rollup task | Application-level write isolation preserved |
 | Per-tenant Metabase row-level filtering deferred | Built-in permissions are enough for the demo | Documented |
@@ -1263,8 +1271,6 @@ Subsequent boots use the volumes and start in ~10 s.
 
 ## 21. Open Questions (Deferred)
 
-- Wire the re-ranker score into the OR-Tools objective (per-arc cost
-  adjustment via the rerank score's negative log).
 - Patient SMS confirmation public endpoint + HTML page.
 - Multi-schema OLTP/OLAP separation (move `reporting.*` to its own
   schema with a read-only role).
@@ -1350,11 +1356,11 @@ one command; the dispatcher↔clinician loop fires within ~1 s.
 
 | Lane | Tests | Coverage | Tooling |
 |---|---|---|---|
-| api (Django) | 182 | ~96% line | pytest + pytest-cov |
+| api (Django) | 188 | ~96% line | pytest + pytest-cov |
 | rt-node | 37 | ~96% line | vitest + @vitest/coverage-v8 |
 | web-ops | 72 | — | vitest + RTL |
 | web-marketing | 4 | — | vitest + RTL |
-| **Total** | **295** | | `make verify-all` |
+| **Total** | **301** | | `make verify-all` |
 
 End-to-end demo path covered by `ops/full-demo.sh` (asserts
 `schedule.optimized`, `visit.status_changed`, and
