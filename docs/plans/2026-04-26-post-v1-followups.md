@@ -27,18 +27,18 @@ on `main` with `make verify-all` green at every step.
   legacy behavior; helper zero-fills disallowed pairings; helper
   scales linearly with `gamma`.
 
-### 2. Patient SMS confirmation public endpoint
+### 2. Patient SMS confirmation public endpoint ✅ (2026-04-27)
 
-- **Why.** §13.5 designs the flow but ships nothing user-facing.
-  Closing it makes the SMS log demoable end-to-end (link in outbox →
-  click → confirmation lands on dashboard).
-- **Shape.** `GET /p/<token>` returns a minimal HTML page (visit
-  window + clinician name + Confirm button); `POST /p/<token>/confirm`
-  stamps `Visit.patient_confirmed_at` and publishes
-  `visit.patient_confirmed`. HMAC + 72-hour TTL + single-use nonce
-  table. Public — no auth, but throttled.
-- **Verification.** Three pytest cases: happy-path confirm, expired
-  token rejected, replay rejected.
+- **Shipped.** `messaging/patient_confirm.py` (Django `TimestampSigner`
+  with 72-hour TTL, per-purpose salt); `messaging/public_views.py`
+  with `GET /p/<token>` (HTML summary + Confirm form) and
+  `POST /p/<token>/confirm` (stamps `Visit.patient_confirmed_at`,
+  publishes `visit.patient_confirmed`); URLs mounted in
+  `hhps/urls.py`; `core/events.py:visit_patient_confirmed` helper.
+  Replay protection via the row itself — once confirmed, returns 410.
+- **Tests.** `test_patient_confirm.py` (6) — happy-path GET renders
+  visit, POST stamps + publishes event, replay returns 410, expired
+  returns 410, malformed/tampered token returns 400.
 
 ### 3. Multi-schema OLTP/OLAP separation
 

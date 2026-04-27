@@ -558,10 +558,11 @@ with `Z` suffix (built by `datetime.now(UTC).isoformat().replace('+00:00', 'Z')`
 | `schedule.optimized` | `optimize_day` Celery task | `{date, routes, unassigned, total_travel_s}` | Optional toast in ops console |
 | `sms.delivered` | `messaging.tasks.deliver_sms` | `{sms_id, visit_id, status}` | SMS log page |
 | `clinician.position_updated` | `POST /api/v1/positions/` | `{clinician_id, lat, lon, ts}` | OpsMap pin update |
+| `visit.patient_confirmed` | `POST /p/<token>/confirm` (public) | `{visit_id, patient_id}` | Today board "confirmed" badge |
 
 All helpers live in `apps/api/core/events.py` (`visit_reassigned`,
 `visit_status_changed`, `schedule_optimized`, `sms_delivered`,
-`clinician_position_updated`).
+`clinician_position_updated`, `visit_patient_confirmed`).
 
 ### 7.3 Channel layout
 
@@ -760,13 +761,17 @@ queries; viewsets stamp `tenant=request.tenant` on create.
 - Same signing key on both sides via `_SIGNING_KEY` derivation
   (sha256 if raw < 32 bytes).
 
-### 10.5 Patient auth (deferred)
+### 10.5 Patient auth
 
-Designed but not wired in v1: signed URL `https://host/p/<token>` with
-HMAC, 72-hour TTL, single-use nonce stored server-side. Patient SMS
-delivery and confirmation flow exists in seed data and the architecture
-diagrams; the public endpoint and confirmation page are deferred to a
-post-v1 follow-up.
+Patients authenticate via a signed URL `/p/<token>` rather than via
+JWT. Tokens are HMAC-signed by Django's `TimestampSigner` (which uses
+`SECRET_KEY` and a per-purpose salt `patient-confirm`) with a 72-hour
+TTL. Replay protection is structural: once `Visit.patient_confirmed_at`
+is set, the confirm endpoint returns 410 regardless of token freshness.
+The two routes (`GET /p/<token>` for the HTML summary and
+`POST /p/<token>/confirm` for the action) are mounted in `hhps/urls.py`
+outside the `/api/v1/` prefix and bypass DRF entirely — the signed
+token *is* the credential.
 
 ---
 
@@ -959,7 +964,7 @@ sequenceDiagram
     end
 ```
 
-### 13.5 Patient SMS confirmation (designed; deferred wiring)
+### 13.5 Patient SMS confirmation (post-v1 #2, shipped 2026-04-27)
 
 ```mermaid
 sequenceDiagram
@@ -967,19 +972,30 @@ sequenceDiagram
     participant P as Patient browser
     participant API as api-django (public)
     participant PG as db-postgres
+    participant R as cache-redis
+    participant RT as rt-node
+    participant D as Dispatcher
 
     Note over P: Tap link in simulated SMS
     P->>API: GET /p/{signed_token}
-    API->>API: HMAC verify · TTL · single-use nonce
+    API->>API: TimestampSigner verify (72h TTL, salt='patient-confirm')
     API->>PG: SELECT visit + clinician + patient
-    API-->>P: 200 HTML (window, clinician, Confirm)
+    API-->>P: 200 HTML (window, clinician, Confirm form)
     P->>API: POST /p/{signed_token}/confirm
-    API->>PG: UPDATE visit SET patient_confirmed_at=now(); mark nonce used
-    API-->>P: 200 confirmed
+    API->>PG: UPDATE visit SET patient_confirmed_at=now()
+    API->>R: PUBLISH visit.patient_confirmed
+    API-->>P: 200 {"status": "confirmed"}
+    R-->>RT: event
+    RT-->>D: WS frame (card shows green "confirmed" badge)
 ```
 
-The link generation, HMAC scheme, and nonce table are designed but the
-public endpoint and template are deferred to a post-v1 follow-up.
+`messaging/patient_confirm.py` owns sign/unsign via Django's
+`TimestampSigner` (HMAC under `SECRET_KEY`, 72-hour TTL, per-purpose
+salt). `messaging/public_views.py` exposes the two endpoints — both
+auth-bypassed (the signed token *is* the credential). Replay
+protection is structural: once `Visit.patient_confirmed_at` is set,
+further POSTs return 410 Gone. Tampered/malformed tokens get 400;
+expired tokens get 410.
 
 ---
 
@@ -1145,7 +1161,7 @@ frame. This is the "is the demo working?" canary.
 
 | Lane | Framework | Tests | Coverage | Notes |
 |---|---|---|---|---|
-| api | pytest + pytest-django + pytest-cov | 188 | ~96% line | `make cov` enforces ≥ 80% |
+| api | pytest + pytest-django + pytest-cov | 194 | ~96% line | `make cov` enforces ≥ 80% |
 | rt-node | vitest + @vitest/coverage-v8 | 37 | ~96% line | `server.ts` direct-run wrapped in `c8 ignore` pragma; smoke test exercises it |
 | web-ops | vitest + @testing-library/react + jsdom 25 | 72 | (tracked, not gated) | `useRealtimeEvents` mocked in `MyRoute`/`TodayBoard` tests so it doesn't steal mocked fetches |
 | web-marketing | vitest + @testing-library/react | 4 | — | Hero / Pricing / ContactForm |
@@ -1271,7 +1287,6 @@ Subsequent boots use the volumes and start in ~10 s.
 
 ## 21. Open Questions (Deferred)
 
-- Patient SMS confirmation public endpoint + HTML page.
 - Multi-schema OLTP/OLAP separation (move `reporting.*` to its own
   schema with a read-only role).
 - Pre-provisioned Metabase dashboards via the Metabase API.
@@ -1356,11 +1371,11 @@ one command; the dispatcher↔clinician loop fires within ~1 s.
 
 | Lane | Tests | Coverage | Tooling |
 |---|---|---|---|
-| api (Django) | 188 | ~96% line | pytest + pytest-cov |
+| api (Django) | 194 | ~96% line | pytest + pytest-cov |
 | rt-node | 37 | ~96% line | vitest + @vitest/coverage-v8 |
 | web-ops | 72 | — | vitest + RTL |
 | web-marketing | 4 | — | vitest + RTL |
-| **Total** | **301** | | `make verify-all` |
+| **Total** | **307** | | `make verify-all` |
 
 End-to-end demo path covered by `ops/full-demo.sh` (asserts
 `schedule.optimized`, `visit.status_changed`, and
@@ -1374,8 +1389,6 @@ trigger sequence).
 - Multi-schema OLTP/OLAP separation.
 - Per-tenant Metabase row-level filtering.
 - Pre-provisioned Metabase dashboards + embedded iframes.
-- Patient SMS confirmation public endpoint.
-- Re-ranker score integration into the VRP objective.
 - Sentry / OTel wiring; audit log table.
 - Recorded demo video / GIFs.
 

@@ -112,3 +112,11 @@ def clinician_position_updated(position: Any) -> dict[str, Any]:
             "ts": position.ts.isoformat(),
         },
     )
+
+
+def visit_patient_confirmed(visit: Any) -> dict[str, Any]:
+    return _envelope(
+        "visit.patient_confirmed",
+        visit.tenant_id,
+        {"visit_id": visit.id, "patient_id": visit.patient_id},
+    )
