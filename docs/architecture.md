@@ -1061,9 +1061,20 @@ reflects that.
   6. SMS engagement funnel
   7. Cancellation / reschedule reasons
   8. Live KPI tiles for the ops console (today-so-far)
-- **Embedding.** Pre-provisioned Metabase dashboards and embedded
-  iframes inside the ops console under `/reports/*` are deferred —
-  Metabase's first-boot is interactive in v1.
+- **Provisioning.** Post-v1 #4 added
+  `apps/api/reporting/metabase_bootstrap.py` and a `manage.py
+  metabase_bootstrap` command that drives Metabase's REST API: admin
+  user, read-only DB connection (schema-filtered to `reporting`),
+  "Agency overview" dashboard with one daily-stats card, global
+  public sharing flipped on, dashboard marked public, public URL
+  printed to stdout. Compose service `bi-metabase-bootstrap` runs the
+  command once after `bi-metabase` is healthy. Re-runnable: if the
+  setup-token has already been consumed, the command logs and exits
+  0.
+- **Embedding.** The bootstrap script prints the public dashboard
+  URL; wiring an iframe under `web-ops` `/reports/<slug>` is the
+  remaining sub-task and is tracked separately in
+  `docs/plans/2026-04-26-post-v1-followups.md`.
 
 ---
 
@@ -1166,7 +1177,7 @@ frame. This is the "is the demo working?" canary.
 
 | Lane | Framework | Tests | Coverage | Notes |
 |---|---|---|---|---|
-| api | pytest + pytest-django + pytest-cov | 198 | ~96% line | `make cov` enforces ≥ 80% |
+| api | pytest + pytest-django + pytest-cov | 206 | ~96% line | `make cov` enforces ≥ 80% |
 | rt-node | vitest + @vitest/coverage-v8 | 37 | ~96% line | `server.ts` direct-run wrapped in `c8 ignore` pragma; smoke test exercises it |
 | web-ops | vitest + @testing-library/react + jsdom 25 | 72 | (tracked, not gated) | `useRealtimeEvents` mocked in `MyRoute`/`TodayBoard` tests so it doesn't steal mocked fetches |
 | web-marketing | vitest + @testing-library/react | 4 | — | Hero / Pricing / ContactForm |
@@ -1291,7 +1302,6 @@ Subsequent boots use the volumes and start in ~10 s.
 
 ## 21. Open Questions (Deferred)
 
-- Pre-provisioned Metabase dashboards via the Metabase API.
 - Embedded Metabase iframes inside the ops console (`/reports/*`).
 - Native Expo build for the clinician app (currently web-first).
 - Playwright e2e covering UI flows (the bash smoke covers the
@@ -1373,11 +1383,11 @@ one command; the dispatcher↔clinician loop fires within ~1 s.
 
 | Lane | Tests | Coverage | Tooling |
 |---|---|---|---|
-| api (Django) | 198 | ~96% line | pytest + pytest-cov |
+| api (Django) | 206 | ~96% line | pytest + pytest-cov |
 | rt-node | 37 | ~96% line | vitest + @vitest/coverage-v8 |
 | web-ops | 72 | — | vitest + RTL |
 | web-marketing | 4 | — | vitest + RTL |
-| **Total** | **311** | | `make verify-all` |
+| **Total** | **319** | | `make verify-all` |
 
 End-to-end demo path covered by `ops/full-demo.sh` (asserts
 `schedule.optimized`, `visit.status_changed`, and
@@ -1389,7 +1399,9 @@ trigger sequence).
 - Native Expo build for the clinician app.
 - Playwright e2e suite (replaced by `ops/full-demo.sh`).
 - Per-tenant Metabase row-level filtering.
-- Pre-provisioned Metabase dashboards + embedded iframes.
+- Embedded Metabase iframes inside the ops console (the bootstrap
+  script provisions and prints the public URL; surfacing it in
+  `web-ops` is the remaining piece).
 - Sentry / OTel wiring; audit log table.
 - Recorded demo video / GIFs.
 

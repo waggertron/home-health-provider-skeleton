@@ -57,17 +57,26 @@ on `main` with `make verify-all` green at every step.
   read `visits_visit` (raises `InsufficientPrivilege`); cannot INSERT
   into reporting.
 
-### 4. Pre-provisioned Metabase dashboards + embedded iframes
+### 4. Pre-provisioned Metabase dashboards ✅ (2026-04-28, partial)
 
-- **Why.** §15 lists eight dashboards but Metabase first-boot is
-  interactive in v1. A reviewer shouldn't have to wire dashboards by
-  hand.
-- **Shape.** A one-shot Python sidecar `ops/metabase-bootstrap.py`
-  that hits Metabase's REST API to create the database, the
-  dashboards, and a signed-embed key. Add a `/reports/<slug>` route on
-  `web-ops` that iframes the signed-embed URL.
-- **Verification.** Manual: cold-boot `make up`, `/reports/agency`
-  renders the dashboard.
+- **Shipped.** `apps/api/reporting/metabase_bootstrap.py` (pure
+  payload builders + orchestrator using `requests.Session`);
+  `manage.py metabase_bootstrap [--base-url ...]`; one-shot compose
+  service `bi-metabase-bootstrap` runs after `bi-metabase` is healthy
+  and creates an admin user, registers the read-only `metabase_ro`
+  DB connection (schema-filtered to `reporting`), builds an "Agency
+  overview" dashboard with a daily-stats card, enables global public
+  sharing, marks the dashboard public, and prints the URL.
+  Idempotent: re-running after first-boot is a no-op (the setup-token
+  is consumed).
+- **Tests.** `test_metabase_bootstrap.py` (8) — payload-builder shape
+  for database/card/setup, `wait_for_metabase` happy path + timeout,
+  setup-token absence, full happy-path orchestration through a mocked
+  Session, idempotent no-op when already set up.
+- **Sub-task deferred.** `/reports/<slug>` iframe route on `web-ops`.
+  The bootstrap script prints the public URL; wiring it into the ops
+  console requires either a config endpoint that surfaces the URL or
+  a build-time substitution. Track separately.
 
 ### 5. Native Expo build for the clinician app
 
