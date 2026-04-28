@@ -40,16 +40,22 @@ on `main` with `make verify-all` green at every step.
   visit, POST stamps + publishes event, replay returns 410, expired
   returns 410, malformed/tampered token returns 400.
 
-### 3. Multi-schema OLTP/OLAP separation
+### 3. Multi-schema OLTP/OLAP separation ✅ (2026-04-28)
 
-- **Why.** §15 promises this but reporting tables share the default
-  schema in v1. A real read-only Metabase role can't be modeled on top
-  of the current setup.
-- **Shape.** Migrate `reporting.*` tables into a `reporting` schema;
-  add a Postgres role `metabase_ro` with `USAGE` on `reporting` and
-  `SELECT` on its tables; update `bi-metabase` connection to that role.
-- **Verification.** A pytest fixture asserts the role can read
-  `reporting.daily_agency_stats` but not `core_visit`.
+- **Shipped.** Reporting migration `0002_schema_separation` creates
+  the `reporting` schema, `ALTER TABLE ... SET SCHEMA reporting` moves
+  `daily_clinician_stats` and `daily_agency_stats` into it (with
+  `state_operations=[AlterModelTable]` so Django state tracks the
+  move), and a second `RunSQL` op creates the `metabase_ro` role with
+  USAGE + SELECT grants on the schema (plus `ALTER DEFAULT PRIVILEGES`
+  for any future tables). Model `Meta.db_table` uses the
+  `'reporting"."<name>'` trick so the ORM emits schema-qualified SQL.
+  `docker-compose.yml` documents the connection hints for Metabase's
+  first-boot wizard.
+- **Tests.** `test_schema_separation.py` (4) — schema exists and
+  holds both tables; `metabase_ro` can SELECT from reporting; cannot
+  read `visits_visit` (raises `InsufficientPrivilege`); cannot INSERT
+  into reporting.
 
 ### 4. Pre-provisioned Metabase dashboards + embedded iframes
 

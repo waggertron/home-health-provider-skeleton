@@ -29,6 +29,11 @@ class DailyClinicianStats(models.Model):
     scoped = TenantScopedManager()
 
     class Meta:
+        # Schema-qualified table. The `"."` between names makes Django
+        # emit `"reporting"."daily_clinician_stats"`. Migration 0002
+        # moves the physical table into the `reporting` schema; this
+        # Meta keeps the ORM aligned.
+        db_table = 'reporting"."daily_clinician_stats'
         constraints = [
             models.UniqueConstraint(
                 fields=["tenant", "clinician", "date"],
@@ -57,6 +62,7 @@ class DailyAgencyStats(models.Model):
     scoped = TenantScopedManager()
 
     class Meta:
+        db_table = 'reporting"."daily_agency_stats'
         constraints = [
             models.UniqueConstraint(
                 fields=["tenant", "date"],

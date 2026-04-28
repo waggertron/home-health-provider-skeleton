@@ -373,11 +373,13 @@ component. Deep-links to `:3001` via `NEXT_PUBLIC_APP_URL`.
 
 ### 5.6 `db-postgres` — Postgres 16
 
-Single instance, single physical database. Reporting tables live in the
-default schema (multi-schema separation deferred — `reporting.*` rows
-are populated *only* by the rollup task, never by request-path code, so
-write isolation is preserved at the application layer). Metabase points
-at the same DB.
+Single instance, single physical database, **two schemas**: `public`
+holds the OLTP `core.*` tables; `reporting` holds the OLAP rollups
+(`daily_clinician_stats`, `daily_agency_stats`). The split was added
+post-v1 (migration `reporting/0002_schema_separation`) so a dedicated
+`metabase_ro` role can be granted SELECT on `reporting` only — write
+isolation is now enforced at the *database* layer, not just at the
+application layer.
 
 ### 5.7 `db-init` — one-shot seed + migrate
 
@@ -1037,9 +1039,12 @@ reflects that.
 ## 15. BI / Analytics
 
 - **Tool.** Metabase OSS (Docker image, H2 metadata), on `:3000`.
-- **Data source.** Reporting tables in the same Postgres DB; multi-
-  schema separation deferred. Write isolation is preserved at the
-  application layer (only the rollup task writes to `reporting.*`).
+- **Data source.** Reporting tables live in a dedicated `reporting`
+  Postgres schema (post-v1 #3, 2026-04-28). The `metabase_ro` role
+  has `USAGE` on the schema and `SELECT` on its tables; it cannot
+  read anything in `public` or write anywhere. Connection hints for
+  Metabase's first-boot wizard are documented in
+  `docker-compose.yml` under `bi-metabase`.
 - **Pipeline.** A Celery Beat job (`reporting.rollup_daily`) runs at
   02:00 local time. It reads the previous day's `core.*` activity and
   upserts into `DailyClinicianStats` + `DailyAgencyStats`. Idempotent:
@@ -1161,7 +1166,7 @@ frame. This is the "is the demo working?" canary.
 
 | Lane | Framework | Tests | Coverage | Notes |
 |---|---|---|---|---|
-| api | pytest + pytest-django + pytest-cov | 194 | ~96% line | `make cov` enforces ≥ 80% |
+| api | pytest + pytest-django + pytest-cov | 198 | ~96% line | `make cov` enforces ≥ 80% |
 | rt-node | vitest + @vitest/coverage-v8 | 37 | ~96% line | `server.ts` direct-run wrapped in `c8 ignore` pragma; smoke test exercises it |
 | web-ops | vitest + @testing-library/react + jsdom 25 | 72 | (tracked, not gated) | `useRealtimeEvents` mocked in `MyRoute`/`TodayBoard` tests so it doesn't steal mocked fetches |
 | web-marketing | vitest + @testing-library/react | 4 | — | Hero / Pricing / ContactForm |
@@ -1247,7 +1252,6 @@ Subsequent boots use the volumes and start in ~10 s.
 | No cloud deployment | Cost + yak-shaving avoidance | Docker Compose runs anywhere; IaC can be added later |
 | Synthetic training data for the ML re-ranker | Can't collect real data | Document the simulation parameters; treat the re-ranker as an architectural demonstration |
 | Native Expo build for the clinician app deferred | Web-first ships the same demo loop without the bundler tax | `/clinician` route on `web-ops` is the v1 surface |
-| Multi-schema OLTP/OLAP separation deferred | Reporting tables only get writes from the rollup task | Application-level write isolation preserved |
 | Per-tenant Metabase row-level filtering deferred | Built-in permissions are enough for the demo | Documented |
 | Pre-provisioned Metabase dashboards | First-boot wizard is interactive | Could be added via Metabase API + a one-shot sidecar |
 | Embedded Metabase iframes inside the ops console deferred | Out of scope for v1 | Reports tab placeholder exists |
@@ -1287,8 +1291,6 @@ Subsequent boots use the volumes and start in ~10 s.
 
 ## 21. Open Questions (Deferred)
 
-- Multi-schema OLTP/OLAP separation (move `reporting.*` to its own
-  schema with a read-only role).
 - Pre-provisioned Metabase dashboards via the Metabase API.
 - Embedded Metabase iframes inside the ops console (`/reports/*`).
 - Native Expo build for the clinician app (currently web-first).
@@ -1371,11 +1373,11 @@ one command; the dispatcher↔clinician loop fires within ~1 s.
 
 | Lane | Tests | Coverage | Tooling |
 |---|---|---|---|
-| api (Django) | 194 | ~96% line | pytest + pytest-cov |
+| api (Django) | 198 | ~96% line | pytest + pytest-cov |
 | rt-node | 37 | ~96% line | vitest + @vitest/coverage-v8 |
 | web-ops | 72 | — | vitest + RTL |
 | web-marketing | 4 | — | vitest + RTL |
-| **Total** | **307** | | `make verify-all` |
+| **Total** | **311** | | `make verify-all` |
 
 End-to-end demo path covered by `ops/full-demo.sh` (asserts
 `schedule.optimized`, `visit.status_changed`, and
@@ -1386,7 +1388,6 @@ trigger sequence).
 
 - Native Expo build for the clinician app.
 - Playwright e2e suite (replaced by `ops/full-demo.sh`).
-- Multi-schema OLTP/OLAP separation.
 - Per-tenant Metabase row-level filtering.
 - Pre-provisioned Metabase dashboards + embedded iframes.
 - Sentry / OTel wiring; audit log table.
